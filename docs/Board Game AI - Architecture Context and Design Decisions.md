@@ -1176,3 +1176,87 @@ Chat Adapter
 > **Ruleについては厳密な裁定者、Strategyについては根拠を持った分析者として振る舞うボードゲーム専門AI**
 
 とする。
+---
+
+# 37. 付録: 初期案から引き継いだ細目
+
+初期の実装指示書（`first-plan.md`, 現在は削除済み / git 履歴に残る）にしか書かれていなかった決定のうち、現在も有効なものをここに移した。
+
+## Authority（情報の信頼レベル）
+
+```text
+official     公式ルールブック / 公式FAQ / errata
+publisher    出版社・ローカライズ元の公式見解
+community    BGG / Reddit / wiki など
+personal     自分のプレイ知見・分析
+```
+
+Rule回答の根拠に使えるのは `official` / `publisher` まで。
+
+## Content Type
+
+```text
+rulebook
+errata
+faq
+strategy
+card_guide
+play_log
+```
+
+## Metadata方針
+
+初期段階では過度に構造化しない。
+
+必須:
+
+```text
+game_id
+content_type
+authority
+edition
+language
+```
+
+必要になった段階で追加:
+
+```text
+player_count
+expansion
+```
+
+以下は **metadata化せずsemantic searchに任せる**:
+
+```text
+cards
+topics
+mechanics
+```
+
+検索時には最低限 `game_id` をfilterする。
+
+## Chat UXでのゲーム明示
+
+GameResolverによる自動判定に加えて、ユーザーが明示できる手段を用意する。
+
+```text
+/game nusfjord 株を1枚だけ買うのって強い？
+```
+
+暗黙の状態管理（channel単位のgame context等）は初期実装では増やさない。
+
+## Retrieval時のVision fallback（将来）
+
+ingest時のVision前処理とは別に、検索後の再確認経路も将来的に追加可能にする。
+
+```text
+Vector Search
+ ↓
+page 7 hit
+ ↓
+R2から該当ページ画像を取得
+ ↓
+Visionで再確認
+```
+
+そのためpage番号は可能な限り保持する。

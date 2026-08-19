@@ -21,18 +21,23 @@ curl localhost:8080/                                             # health: {"sta
 - 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/entrypoints/slack.py`）が行う。
 - テスト / lint / formatter はまだ導入されていない（tasks.md A1 の残タスク）。構文チェックだけなら `uv run python -m py_compile <files>`。
 
-## ドキュメントの優先順位
+## ドキュメント
 
-1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。最新かつ一次情報。
+1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
 2. **`docs/tasks.md`** — 実装タスクの分解と推奨実装順。**小見出し 1 つ（`A1`, `B1`, `D3` など）を 1 タスクの単位**として扱う設計になっている。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
-4. `plan.md` — 初期の実装指示書。**一部は docs に上書きされている**（下記）ので、衝突したら docs を採る。
 
-### plan.md が古くなっている点
+初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 
-- **SQLite は原則採用しない。** plan.md は SQLite を knowledge catalog にする案だが、docs §4 で「R2 / SQLite / OpenAI File / Vector Store の 4 箇所に同じ情報を持つ不整合」を避けるため却下されている。game 識別用の小さな catalog は `games.yaml`（docs §16）に限定し、document 一覧は持たせない。会話履歴 DB も持たない（Slack thread から取得する）。
-- **ingest は CLI 手動 sync ではなく event driven。** R2 object create/delete → R2 Event Notification → Cloudflare Queue → Ingest Worker → Vector Store（docs §5）。補助として reconciliation / GC を持つ。
-- **Vector Store は単一ではなく Rule / Strategy で分離**する方針（docs §8）。理由は検索性能ではなく trust boundary。
+### 採らない案（提案し直さないこと）
+
+初期案にあったが却下された判断。理由付きで潰れているので、再提案する前に arch doc の該当節を読む。
+
+- **SQLite を knowledge catalog にしない。** R2 / SQLite / OpenAI File / Vector Store の 4 箇所に同じ情報を持つ不整合を避けるため（arch §4）。game 識別用の小さな catalog は `games.yaml` のみ（arch §16）、document の metadata は R2 の path から導出する（arch §6）。会話履歴 DB も持たない（Slack thread から取得、arch §17）。
+- **単一 Vector Store + attributes で済ませない。** Rule / Strategy Store を分離する（arch §8）。理由は検索性能ではなく trust boundary。
+- **手動 CLI で ingest / sync しない。** R2 Event Notification → Cloudflare Queue → Ingest Worker（arch §5, tasks D2/D3）。CLI は reconciliation / GC（`sync`, `gc`）に限定（tasks D4）。ingest は Sprite ではなく Cloudflare 側に寄せる（arch §3）。
+- **File Search の結果からそのまま回答させない。** query decomposition → multi-query retrieval → Rule Adjudicator（arch §9, §10, §34）。
+- **retrieval を「Vector Store なし・直接 file input」で始めない。** 一度検討したが破棄（file_id を SQLite で管理する前提だったため）。Vector Store + File Search で進める（tasks D1/E1/M1）。
 
 ## アーキテクチャ
 
@@ -64,8 +69,6 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 - Strategy は唯一解がないので、Rule Adjudicator を拡張せず別の **Strategy Analyst Protocol**（前提 / 評価軸 / 複数候補 / trade-off を明示）を使う。
 - Slack thread を conversation 単位（`thread_ts` = conversation_id）とし、thread 履歴から standalone question を生成して毎回再検索する。**過去の bot 回答は context には使うがルール根拠にはしない**（誤答の連鎖を防ぐ）。
 - retrieval / reasoning の切り分けが debug できる構造にする（Responses API の `file_search` 任せにせず、Retrieval API を明示的に挟める形）。モデルを上げる前に Retrieval / Protocol / Context を改善し、同一 eval で比較する。
-
-⚠️ `answer_service.py` の docstring には「方針A: Vector Store なし・直接 file input」と書いてあるが、docs / tasks.md は OpenAI Vector Store + File Search 前提（D1, E1, M1）。docs のほうが新しいので、retrieval を実装する前にどちらを採るかユーザーに確認すること。
 
 ## Sprites でのデプロイ
 
