@@ -24,18 +24,19 @@ curl localhost:8080/                                             # health: {"sta
 ## ドキュメント
 
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
-2. **`docs/tasks.md`** — 実装タスクの分解と推奨実装順。**小見出し 1 つ（`A1`, `B1`, `D3` など）を 1 タスクの単位**として扱う設計になっている。次に何をやるかはここを見る。
+2. **`docs/tasks.md`** — 実装タスクの分解と推奨実装順。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う設計になっている。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 
 ### 採らない案（提案し直さないこと）
 
-初期案にあったが却下された判断。理由付きで潰れているので、再提案する前に arch doc の該当節を読む。
+検討して却下された判断。理由付きで潰れているので、再提案する前に arch doc の該当節を読む。
 
-- **SQLite を knowledge catalog にしない。** R2 / SQLite / OpenAI File / Vector Store の 4 箇所に同じ情報を持つ不整合を避けるため（arch §4）。game 識別用の小さな catalog は `games.yaml` のみ（arch §16）、document の metadata は R2 の path から導出する（arch §6）。会話履歴 DB も持たない（Slack thread から取得、arch §17）。
+- **SQLite を knowledge catalog にしない。** 同じ情報を複数箇所で mutable に持つ不整合を避けるため（arch §4）。会話履歴 DB も持たない（Slack thread から取得、arch §17）。
+- **R2 の path から metadata を導出しない。** path を metadata schema にすると typo が silently 通り、次元を足すと全 path の move + 再 ingest になる。しかも player_count / edition / 多言語は階層に収まらないので機構が 2 つに増える（arch §6）。path は locator（`game_id` prefix のみ）。
 - **単一 Vector Store + attributes で済ませない。** Rule / Strategy Store を分離する（arch §8）。理由は検索性能ではなく trust boundary。
-- **手動 CLI で ingest / sync しない。** R2 Event Notification → Cloudflare Queue → Ingest Worker（arch §5, tasks D2/D3）。CLI は reconciliation / GC（`sync`, `gc`）に限定（tasks D4）。ingest は Sprite ではなく Cloudflare 側に寄せる（arch §3）。
+- **event driven ingest（R2 Event → Cloudflare Queue → Worker）を v1 で作らない。** catalog が git 上にあるので、この経路が担当できるのは「R2 へ直接置いた場合の自動取り込み」だけで、人の手間は sync CLI と変わらない（arch §5, tasks D3 は保留）。
 - **File Search の結果からそのまま回答させない。** query decomposition → multi-query retrieval → Rule Adjudicator（arch §9, §10, §34）。
 - **retrieval を「Vector Store なし・直接 file input」で始めない。** 一度検討したが破棄（file_id を SQLite で管理する前提だったため）。Vector Store + File Search で進める（tasks D1/E1/M1）。
 
@@ -63,7 +64,10 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 
 ### 設計上ぶれさせない前提
 
-- **R2 が唯一の authoritative state**、Vector Store は R2 から再生成可能な derived index。壊れたら R2 から作り直せること。metadata は可能な限り R2 の path から導出する（`games/<game>/official/rulebook/ja/rulebook.pdf` → game_id / authority / content_type / language）。
+- **rulebook 本文を repo に置かない（厳守）。** 個人利用の範囲で複製しているものなので、PDF・page image・**PDF から生成した全文 Markdown** はすべて R2 のみに置く。repo に持つのは metadata だけ。`.gitignore` で `*.pdf` / `*.epub` / `games/` は弾いているが、変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計にする（arch §4）。
+- **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`documents.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `documents.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index（arch §4）。
+- **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は repo の `documents.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため（arch §6）。`documents.yaml` は YAML 1.1 の暗黙型変換に注意（`language: no` が `False` になる）→ `safe_load` + JSON Schema で `type: string` を強制する。
+- **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（arch §5, tasks D2）。
 - **Rule と Strategy を混ぜない。** Rule 回答に community / personal の情報をルール根拠として混ぜない。Rule を Strategy corpus から推測しない。
 - **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol**（docs §9）を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は「結論 → 根拠 → 解釈 → 引用」、原則日本語。
 - Strategy は唯一解がないので、Rule Adjudicator を拡張せず別の **Strategy Analyst Protocol**（前提 / 評価軸 / 複数候補 / trade-off を明示）を使う。

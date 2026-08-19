@@ -72,21 +72,15 @@ Query Orchestrator
 Knowledge ingestion:
 
 ```text
-                     Source of Truth
-                           │
-                           ▼
-                          R2
-                           │
-                 R2 Event Notification
-                           │
-                           ▼
-                   Cloudflare Queue
-                           │
-                           ▼
-                    Ingest Worker
-                           │
-                           ▼
-                  OpenAI Vector Store
+documents.yaml (desired)        R2 (bytes / source of truth)
+        │                              │
+        └──────────────┬───────────────┘
+                       ▼
+                   sync CLI
+                       │  diff & apply (冪等)
+                       ▼
+             OpenAI Vector Store
+              (Rule Store / Strategy Store)
 ```
 
 Runtime:
@@ -116,136 +110,152 @@ Sprites
 
 # 4. R2をSource of Truthとする
 
-Knowledgeの原本はCloudflare R2に保存する。
+Knowledgeの原本(bytes)はCloudflare R2に保存する。
 
 重要な設計原則:
 
-> **R2が唯一のauthoritative stateであり、OpenAI Vector Storeは再生成可能な検索indexである。**
-
-RDBMS / SQLiteをKnowledge catalogとして持つ案も検討したが、不整合状態が増えるため原則採用しない。
-
-避けたい状態:
-
-```text
-R2
-SQLite
-OpenAI File
-Vector Store
-```
-
-の4箇所に同じ情報を保持すること。
-
-代わりに:
-
-```text
-R2
- ↓
-derive
- ↓
-Vector Store
-```
-
-とする。
+> **R2がdocument bytesの唯一のauthoritative stateであり、OpenAI Vector Storeは再生成可能な検索indexである。**
 
 Vector Storeが壊れてもR2から再構築できることを前提にする。
 
+## catalog(desired state)はgitに置く
+
+metadataをR2のpathから導出する案は採らない(§6)。代わりにrepo内の`documents.yaml`にmetadataを宣言する。
+
+したがってSoTは役割ごとに分かれる。
+
+```text
+document bytes  → R2
+desired catalog → git repo (documents.yaml / Markdownのfront matter)
+actual state    → OpenAI Vector Store (file attributes)
+```
+
+catalogをgitに置く理由:
+
+- review / 履歴 / CIでのschema validationが効く
+- 編集が容易
+
+RDBMS / SQLiteをKnowledge catalogとして持つ案は引き続き採用しない。避けたいのは同じ情報を複数箇所で**mutableに**持つことであり、上記3者は役割が異なる。**desiredとactualを混ぜない**ことを守る(observed情報をdocuments.yamlに書き戻さない)。
+
+## rulebook本文をrepoに置かない(厳守)
+
+rulebookは個人利用の範囲で複製しているものなので、**PDF本体をrepositoryに置かない**。
+
+```text
+repo : metadataのみ (documents.yaml, front matter)
+R2   : rulebook PDF / page image / 変換後の全文Markdown
+```
+
+PDFから生成したpage-aware Markdown(§13)やpage imageも**rulebook本文の複製**なので、同様にrepoへ置かずR2に置く。front matterは変換pipelineが書き込む。
+
+`.gitignore`で拡張子レベルの事故は防いでいるが、変換後Markdownは拡張子で判別できないため、**sync CLIがrepo内にbytesを書き出さない**設計にする。
 ---
 
-# 5. R2 Event Driven Ingest
+# 5. Ingest経路
 
-手動CLIで毎回syncするより、R2へのファイル追加をトリガーに自動ingestする。
+## v1: sync CLIによるreconcile
 
-```text
-R2 object create/delete
-        ↓
-R2 Event Notification
-        ↓
-Cloudflare Queue
-        ↓
-Worker
-        ↓
-OpenAI Vector Store
-```
-
-Queueを挟む理由:
-
-- OpenAI API一時障害
-- rate limit
-- retry
-- DLQ
-- event処理の疎結合化
-
-Create時:
+catalogがgit上にあるため、catalogの変更はR2 eventでは検知できない。したがってingestは**sync CLIによるreconcile**を主経路とする。
 
 ```text
-R2 object
- ↓
-OpenAI Files upload
- ↓
-Vector Store attach
- ↓
-attributes設定
+documents.yaml (desired)  +  R2 (bytes)
+                ↓
+            sync CLI
+                ↓
+          diff & apply
+                ↓
+OpenAI Vector Store (actual)
 ```
 
-Delete時:
+desiredとactualのdiffを取って適用するだけなので**冪等**。何度実行しても安全で、実行漏れ・重複・順序に依存しない。
+
+- desiredにあってactualに無い → Files upload + attach + attributes設定
+- actualにあってdesiredに無い → detach / delete
+- 両方にあるがR2のETagが変わっている → 再upload
+- orphan OpenAI File → delete (gc)
+
+ローカル実行、またはmerge時にCIで実行する。
+
+## R2 Event Driven Ingest (v1では保留)
+
+当初はR2 object create/deleteをtriggerに、Cloudflare Queue経由で自動ingestする構成を検討した。
 
 ```text
-R2 object key
- ↓
-Vector Store上でsourceを特定
- ↓
-detach / delete
+R2 object create/delete → Event Notification → Queue → Worker → Vector Store
 ```
 
-必要なら補助的にreconciliation / GCを実装する。
+Queueを挟む理由はOpenAI API一時障害 / rate limit / retry / DLQ / 疎結合化だった。
 
+しかしcatalogがgit上にある構成では、この経路が担当できるのは「R2へ直接ファイルを置いた場合の自動取り込み」だけになる。人の手間もsync CLIとほぼ変わらないため、**v1では実装しない**。
+
+R2へのドラッグ&ドロップ運用が実際に不便になった段階で追加する。reconcileが冪等なので、後から足してもsync CLIと共存できる。
 ---
 
-# 6. R2のファイル構造
+# 6. R2のファイル構造とmetadataの持ち場所
 
-Rule系の例:
+## pathからmetadataを導出しない
+
+以前はpath自体をmetadata schemaにする案だった(`games/<game>/official/rulebook/ja/rulebook.pdf`から4項目を導出する)。これは採らない。
+
+理由:
+
+- pathがそのままschemaになる。typoしても構造上はvalidなので、誤ったattributeで静かにingestされる
+- 次元(edition, expansionなど)を後から足すと、全pathをmoveして再ingestになる
+- player_count / edition / 複数言語 / faqとerrataの両方に当たる文書などは階層に収まらない。結局path以外の機構が必要になり、機構が2つに増える
+- pathはevent routingやprefix filterにも使うため、metadata都合で自由に再構成できない
+
+## pathはlocatorとして扱う
+
+`game_id` prefixだけは維持する。per-gameのlist / delete、reconciliationが素直になるため。
 
 ```text
 games/
   nusfjord/
-    official/
-      rulebook/
-        ja/
-          rulebook.pdf
-      faq/
-      errata/
-```
-
-Strategy:
-
-```text
-games/
-  nusfjord/
+    rulebook-ja.pdf
+    faq-ja.pdf
     strategy/
       bgg/
-      reddit/
       personal/
 ```
 
-可能なmetadataはpathから導出する。
+これはmetadataの導出元ではなく、単なる置き場所として扱う。
 
-例:
+## metadataの持ち場所は「形式」で決める
 
-```text
-games/nusfjord/official/rulebook/ja/rulebook.pdf
+**そのファイル形式がmetadataを内包できるか**で決める。
+
+| 形式 | metadataの場所 |
+|---|---|
+| PDF / 画像 (metadataを持てない) | repoの`documents.yaml`に宣言 |
+| Markdown (metadataを持てる) | file内のYAML front matter |
+
+content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的にdocuments.yaml側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
+
+crawlerが生成するファイルは必ずfile内にmetadata sectionを持つ(§26)。
+
+## documents.yaml
+
+repoに置く。宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(§4)。
+
+```yaml
+version: 1
+
+documents:
+  - key: games/nusfjord/rulebook-ja.pdf
+    game_id: nusfjord
+    content_type: rulebook
+    authority: official
+    language: ja
+    edition: bigbox
 ```
 
-から:
+YAMLを採る理由はコメントが書けること。「このFAQはpublisher見解なのでauthority=publisher」といった判断理由をmetadataの隣に残せる。
 
-```text
-game_id       = nusfjord
-authority     = official
-content_type  = rulebook
-language      = ja
-```
+ただしYAML 1.1の暗黙型変換に注意する。`language: no`(ノルウェー語)は`False`になるため、`yaml.safe_load`と`type: string`を要求するJSON Schemaで必ずvalidationし、静かに壊れない形にする。
 
-を解決可能にする。
+## derived artifactは宣言しない
 
+PDFから生成したpage-aware Markdownやpage imageはderived artifactなので手で宣言しない。変換pipelineが元PDFのmetadataをfront matterとして継承させる。documents.yamlが宣言するのはsourceのみ。
 ---
 
 # 7. Vector Store
@@ -1058,6 +1068,8 @@ Terra
 Sol
 reasoning effort
 ```
+
+※ Terra / Sol は OpenAI ChatGPT 5.6 世代のモデル名。
 
 などを比較する。
 

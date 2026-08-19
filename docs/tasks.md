@@ -70,25 +70,49 @@ Unknown
 ## C. R2 Storage
 
 ### C1. R2ディレクトリ設計
-例:
+pathはlocatorとして扱い、metadataを導出しない(arch §6)。`game_id` prefixのみ維持する。
 
 ```text
 games/
   nusfjord/
-    official/
-      rulebook/
+    rulebook-ja.pdf
+    faq-ja.pdf
     strategy/
+      bgg/
+      personal/
 ```
+
+**rulebook PDF / page image / 変換後の全文Markdownはrepoに置かない**(arch §4, 厳守)。
 
 ### C2. R2クライアント
 - upload
 - get
-- list
+- list (ETag取得含む)
 - delete
-- metadata取得
 
-R2をSource of Truthとして扱う。
+R2をdocument bytesのSource of Truthとして扱う。
 
+### C3. `documents.yaml`(document catalog)
+repoに置くdesired state。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
+
+```yaml
+version: 1
+
+documents:
+  - key: games/nusfjord/rulebook-ja.pdf
+    game_id: nusfjord
+    content_type: rulebook
+    authority: official
+    language: ja
+    edition: bigbox
+```
+
+`openai_file_id`やhashのような観測結果は書かない(desiredとactualを混ぜない)。
+
+### C4. `documents.yaml` JSON Schema
+- schema validation
+- `language: no`がbooleanに落ちる等のYAML 1.1暗黙型変換を`type: string`で検出する
+- 存在しないR2 keyの検出、key重複の検出
 ---
 
 ## D. Rulebook Ingest / Vector Store
@@ -101,51 +125,34 @@ R2をSource of Truthとして扱う。
 - status確認
 - delete
 
-### D2. R2 Event Notification
-構成:
+### D2. sync CLI(ingest主経路)
+`documents.yaml` + Markdown front matter(desired)とVector Store(actual)のdiffを取って適用する。冪等。
 
 ```text
-R2
- ↓
-Event Notification
- ↓
-Cloudflare Queue
+desiredにあってactualに無い     → Files upload + attach + attributes設定
+actualにあってdesiredに無い     → detach / delete
+両方にあるがR2のETagが違う      → 再upload
 ```
 
-対象:
+ローカル実行、またはmerge時にCIで実行する。
 
-- object-create
-- object-delete
+### D3. R2 Event Driven Ingest(保留)
+v1では実装しない(arch §5)。catalogがgit上にあるため、この経路が担当できるのは「R2へ直接置いた場合の自動取り込み」だけで、人の手間はsync CLIと変わらない。
 
-### D3. Ingest Worker
-Queue consumerとして実装。
-
-Create:
+必要になった段階で追加する:
 
 ```text
-R2 object取得
-→ OpenAI Files upload
-→ Vector Store attach
-→ attributes設定
+R2 object create/delete → Event Notification → Cloudflare Queue → Worker
 ```
 
-Delete:
+### D4. GC / 整合性チェック
+D2のreconcileで拾えない残骸を掃除する。
 
-```text
-R2 key
-→ Vector Store上の対応file特定
-→ detach/delete
-```
+- orphan OpenAI File(どのVector Storeからも参照されていない)
+- R2にあるがdocuments.yamlにもfront matterにも宣言が無い(=ingestされない)object
+- documents.yamlが指すkeyがR2に存在しない
 
-### D4. Reconciliation / GC
-イベント駆動だけでは残り得る不整合を修復する。
-
-- R2にあるがVector Storeにない
-- Vector StoreにあるがR2にない
-- orphan OpenAI File
-- hash差分
-
-`sync` / `gc` コマンドとして実装。
+`gc` / `doctor` コマンドとして実装。
 
 ---
 
@@ -351,6 +358,8 @@ hybrid
 ## K. Strategy Corpus
 
 ### K1. Strategy Document Schema
+Markdownはfile内にmetadataを持つ形式なので、front matterがmetadataの唯一の置き場所になる(arch §6)。`documents.yaml`には書かない。crawlerが生成するファイルも必ずfront matterを持つ。
+
 基本:
 
 ```text
@@ -553,6 +562,8 @@ Sol
 reasoning effort差
 ```
 
+※ Terra / Sol は OpenAI ChatGPT 5.6 世代のモデル名。
+
 を比較。
 
 ---
@@ -564,19 +575,20 @@ reasoning effort差
 ```text
 1. A1 Python project
 2. B1/B2 games.yaml
-3. C R2
-4. D1 OpenAI Vector Store
-5. E1 basic RAG
-6. F Rule Adjudicator
-7. O Rule Eval
-8. D2/D3 R2 Event ingest
-9. B3 GameResolver
-10. H Slack Adapter / thread
-11. E2/E3 Retrieval改善
-12. K Strategy document
-13. L Strategy crawler
-14. M Strategy Analyst
-15. Discord / Vision / structured statistics
+3. C1/C2 R2
+4. C3/C4 documents.yaml
+5. D1 OpenAI Vector Store
+6. D2 sync CLI
+7. E1 basic RAG
+8. F Rule Adjudicator
+9. O Rule Eval
+10. B3 GameResolver
+11. H Slack Adapter / thread
+12. E2/E3 Retrieval改善
+13. K Strategy document (front matter)
+14. L Strategy crawler
+15. M Strategy Analyst
+16. 必要になったら D3 event ingest / Discord / Vision / structured statistics
 ```
 
-特に **Claude / Codexへ渡す単位としては、この `A1`, `B1`, `D3` のような小見出し1つを1タスク** と考えるのがよい。
+特に **Claude / Codexへ渡す単位としては、この `A1`, `B1`, `D2` のような小見出し1つを1タスク** と考えるのがよい。
