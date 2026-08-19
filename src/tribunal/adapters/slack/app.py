@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from slack_bolt import App
 from slack_bolt.adapter.fastapi import SlackRequestHandler
 
-from src.application.answer_service import AnswerService
+from tribunal.application.answer_service import AnswerService
 
 logger = logging.getLogger(__name__)
 

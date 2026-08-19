@@ -4,21 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 何のプロジェクトか
 
-Slack（将来的に Discord）からボードゲームのルール / 戦略を質問できる RAG chatbot。Python 3.11+ / FastAPI + slack_bolt、パッケージ管理は `uv`。実行環境は Fly.io Sprites。
+**tribunal** — Slack（将来的に Discord）からボードゲームのルール / 戦略を質問できる RAG chatbot。Python 3.11+ / FastAPI + slack_bolt、パッケージ管理は `uv`。実行環境は Fly.io Sprites。
 
 ゴールは「ルールブック検索 bot」ではなく、**Rule については厳密な裁定者、Strategy については根拠を持った分析者**として振る舞うこと。
 
-コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / `documents.yaml` はすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
+コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / catalog はすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
 
 ## コマンド
 
 ```bash
 uv sync                                                          # 依存同期
-uv run uvicorn src.entrypoints.slack:app --port 8080 --reload    # ローカル起動（.env を読む）
+uv run uvicorn tribunal.entrypoints.slack:app --port 8080 --reload    # ローカル起動（.env を読む）
 curl localhost:8080/                                             # health: {"status":"ok","platforms":["slack"]}
 ```
 
-- 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/entrypoints/slack.py`）が行う。
+- 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/tribunal/entrypoints/slack.py`）が行う。
 - テスト / lint / formatter はまだ導入されていない（tasks.md A1 の残タスク）。構文チェックだけなら `uv run python -m py_compile <files>`。
 
 ## ドキュメント
@@ -42,13 +42,36 @@ curl localhost:8080/                                             # health: {"sta
 
 ## アーキテクチャ
 
-レイヤの依存方向は **adapters → application → domain** の一方向。
+レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。全体のディレクトリ構成は arch §38（現状は下記の一部だけが存在する）。
 
-- `src/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
-- `src/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
-- `src/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。module import 時に `os.environ[...]` を読むので、**import しただけで Slack の env が必須になる**点に注意。
-- `src/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
-- `src/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/main.py` は slack entrypoint を re-export する後方互換シム。
+```text
+catalog/              # 宣言データ (games.yaml, documents/<game_id>.yaml, schema/)
+evals/                # eval dataset
+src/tribunal/
+  entrypoints/        # uvicorn 起動対象
+  adapters/           # inbound: chat platform
+  application/        # answer_service.py, ports.py, pipeline/, rule/, strategy/
+  domain/
+  infra/              # outbound: openai/, r2/
+  knowledge/          # catalog 読み込み / front matter / reconcile
+  eval/  cli/
+```
+
+命名で守ること:
+
+- **`adapters/` は inbound（呼ばれる側）専用。** OpenAI / R2 のような outbound client は `infra/` に置く。両方を adapters に入れると依存方向が逆のものが同居する。
+- **`adapters/` `application/` から `knowledge/` を import しない。** ingest は手元 / CI で走り、Sprite 上の bot は R2 も catalog も触らない。逆向き（`cli/` → `knowledge/` → `infra/`）は正常。
+- **port を切るのは retrieval だけ**（E1 の `file_search` → E2 の Retrieval API で実装が 2 つになるため）。他は必要になるまで Protocol を作らない。
+- **protocol prompt は `.md` ファイル**として使う側にコロケートし（`application/rule/prompts/adjudicator.md`）、コード内の文字列リテラルにしない。eval で前後比較する対象なので diff が見えることが要件。
+- **`catalog/` と `evals/` は `src/` の外**。人が宣言・レビューするデータでコードではない。
+
+現在あるモジュール:
+
+- `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
+- `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
+- `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。module import 時に `os.environ[...]` を読むので、**import しただけで Slack の env が必須になる**点に注意。
+- `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
+- `src/tribunal/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/tribunal/main.py` は slack entrypoint を re-export する後方互換シム。
 
 Discord は FastAPI に mount できない Gateway（常時 websocket）方式に寄せる方針なので、`app_factory` ではなく独立 entrypoint / 別 service として扱う（対応自体を見送る可能性あり）。
 

@@ -19,7 +19,7 @@ def create_app(platforms: list[str]) -> FastAPI:
 
     for platform in platforms:
         if platform == "slack":
-            from src.adapters.slack.app import register as register_slack
+            from tribunal.adapters.slack.app import register as register_slack
 
             register_slack(app)
         # 注: Discord は Gateway 方式（mention/自由文に反応）に寄せる方針。

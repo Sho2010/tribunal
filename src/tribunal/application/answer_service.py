@@ -1,6 +1,6 @@
-from src.domain.answer import Answer
+from tribunal.domain.answer import Answer
 
-FIXED_REPLY = "🎲 boardgame-ai は準備中です。もう少しお待ちください。"
+FIXED_REPLY = "🎲 tribunal は準備中です。もう少しお待ちください。"
 
 
 class AnswerService:

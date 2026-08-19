@@ -113,7 +113,8 @@ Rule と混ざらないことを保ちながら、別系統として足す。
 
 ### A1. Pythonプロジェクトの初期構成
 - Pythonプロジェクト作成
-- package / CLI / test構成
+- ディレクトリ構成(arch §38)の骨組みを作る
+- CLI / test 構成
 - lint / format / type check
 - 設定・secret管理方針
 - Sprites上で起動できる最小構成
@@ -133,6 +134,15 @@ Rule と混ざらないことを保ちながら、別系統として足す。
   - strategy
   - card_guide
   - play_log
+
+### A3. パッケージ名の確定と rename ✅
+プロダクト名 = **tribunal**(arch §38)。package / repo / Sprite すべて`tribunal`に統一済み。
+
+- `src/tribunal/`、`pyproject.toml`、全import、起動対象`tribunal.entrypoints.slack:app`
+- `README.md`、`CLAUDE.md`、`docs/sprites.md`、`note.md`のrunbook
+- repo: `github.com/Sho2010/tribunal`
+
+Sprite はまだ作成していないので、`note.md` の runbook 通り`sprite create tribunal`から始める(`.sprite`は`sprite use`が書き換える)。
 
 ---
 
@@ -201,27 +211,30 @@ games/
 
 R2をdocument bytesのSource of Truthとして扱う。
 
-### C3. `documents.yaml`(document catalog)
-repoに置くdesired state。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
+### C3. document catalog (`catalog/documents/<game_id>.yaml`)
+repoに置くdesired state。**game 1つにつき1ファイル**。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
 
 ```yaml
+# catalog/documents/nusfjord.yaml
 version: 1
+game_id: nusfjord
 
 documents:
   - key: games/nusfjord/rulebook-ja.pdf
-    game_id: nusfjord
     content_type: rulebook
     authority: official
     language: ja
     edition: bigbox
 ```
 
-`openai_file_id`やhashのような観測結果は書かない(desiredとactualを混ぜない)。
+`game_id`はファイル名から導出せず中に明記する。`openai_file_id`やhashのような観測結果は書かない(desiredとactualを混ぜない)。
 
-### C4. `documents.yaml` JSON Schema
+### C4. document catalog の JSON Schema
 - schema validation
 - `language: no`がbooleanに落ちる等のYAML 1.1暗黙型変換を`type: string`で検出する
+- ファイル名と`game_id`の一致を検査する
 - 存在しないR2 keyの検出、key重複の検出
+
 ---
 
 ## D. Rulebook Ingest / Vector Store

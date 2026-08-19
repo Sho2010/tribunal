@@ -1,4 +1,4 @@
-# Fly.io Sprites 運用リファレンス (bg-bot 向け)
+# Fly.io Sprites 運用リファレンス (tribunal 向け)
 
 > このドキュメントは Fly.io Sprites の公式ドキュメント (https://docs.sprites.dev) を蒸留した**運用者向けリファレンス**です。
 > 想定ワークロード: **Python (FastAPI + slack_bolt) の Slack bot**。ポート 8080 で Slack HTTP Events (`/slack/events`) を受け、sleep/wake を跨いで常駐し、secrets (`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`) は起動時に注入する。
@@ -114,8 +114,8 @@ tail -f /.sprite/logs/services/web.log
 ```
 sprite-env services create slackbot \
   --cmd uv \
-  --args "run,uvicorn,src.entrypoints.slack:app,--host,0.0.0.0,--port,8080" \
-  --dir /home/sprite/bg-bot \
+  --args "run,uvicorn,tribunal.entrypoints.slack:app,--host,0.0.0.0,--port,8080" \
+  --dir /home/sprite/tribunal \
   --env "SLACK_BOT_TOKEN=xoxb-...,SLACK_SIGNING_SECRET=..." \
   --http-port 8080
 ```
@@ -340,24 +340,24 @@ sprite auth setup --token "my-org/token-id/secret"
 
 ```bash
 # 1. Sprite 作成 & アクティブ化
-sprite create bg-bot
-sprite use bg-bot
+sprite create tribunal
+sprite use tribunal
 
 # 2. リポジトリを clone(ディスクは永続するので exec でよい)
-sprite exec -- bash -c "cd /home/sprite && git clone <REPO_URL> bg-bot"
+sprite exec -- bash -c "cd /home/sprite && git clone <REPO_URL> tribunal"
 
 # 3. uv をインストール(未プリインストールの場合)
 sprite exec -- bash -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
 #    → uv は通常 ~/.local/bin/uv に入る
 
 # 4. 依存を同期(結果は永続)
-sprite exec -- bash -c "cd /home/sprite/bg-bot && ~/.local/bin/uv sync"
+sprite exec -- bash -c "cd /home/sprite/tribunal && ~/.local/bin/uv sync"
 
 # 5. uvicorn を常駐 service として作成(http-port 8080)
 sprite-env services create slackbot \
   --cmd /home/sprite/.local/bin/uv \
-  --args "run,uvicorn,src.entrypoints.slack:app,--host,0.0.0.0,--port,8080" \
-  --dir /home/sprite/bg-bot \
+  --args "run,uvicorn,tribunal.entrypoints.slack:app,--host,0.0.0.0,--port,8080" \
+  --dir /home/sprite/tribunal \
   --env "SLACK_BOT_TOKEN=xoxb-...,SLACK_SIGNING_SECRET=..." \
   --http-port 8080
 #    ⚠️ services create は Sprite 内で実行するコマンド。ローカルからは
@@ -368,11 +368,11 @@ sprite config update --url-auth public
 
 # 7. URL を取得
 sprite info
-#    → https://bg-bot-<org-id>.sprites.app/
+#    → https://tribunal-<org-id>.sprites.app/
 
 # 8. Slack アプリ設定で Request URL を設定
 #    Event Subscriptions → Request URL:
-#    https://bg-bot-<org-id>.sprites.app/slack/events
+#    https://tribunal-<org-id>.sprites.app/slack/events
 #    (Slack の URL verification challenge に bot が応答する必要あり)
 
 # 9. 動作確認

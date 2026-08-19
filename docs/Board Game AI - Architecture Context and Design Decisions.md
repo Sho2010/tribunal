@@ -72,7 +72,7 @@ Query Orchestrator
 Knowledge ingestion:
 
 ```text
-documents.yaml (desired)        R2 (bytes / source of truth)
+catalog (desired)        R2 (bytes / source of truth)
         │                              │
         └──────────────┬───────────────┘
                        ▼
@@ -120,13 +120,13 @@ Vector Storeが壊れてもR2から再構築できることを前提にする。
 
 ## catalog(desired state)はgitに置く
 
-metadataをR2のpathから導出する案は採らない(§6)。代わりにrepo内の`documents.yaml`にmetadataを宣言する。
+metadataをR2のpathから導出する案は採らない(§6)。代わりにrepo内の`catalog/documents/<game_id>.yaml`にmetadataを宣言する。
 
 したがってSoTは役割ごとに分かれる。
 
 ```text
 document bytes  → R2
-desired catalog → git repo (documents.yaml / Markdownのfront matter)
+desired catalog → git repo (catalog/documents/*.yaml / Markdownのfront matter)
 actual state    → OpenAI Vector Store (file attributes)
 ```
 
@@ -135,20 +135,21 @@ catalogをgitに置く理由:
 - review / 履歴 / CIでのschema validationが効く
 - 編集が容易
 
-RDBMS / SQLiteをKnowledge catalogとして持つ案は引き続き採用しない。避けたいのは同じ情報を複数箇所で**mutableに**持つことであり、上記3者は役割が異なる。**desiredとactualを混ぜない**ことを守る(observed情報をdocuments.yamlに書き戻さない)。
+RDBMS / SQLiteをKnowledge catalogとして持つ案は引き続き採用しない。避けたいのは同じ情報を複数箇所で**mutableに**持つことであり、上記3者は役割が異なる。**desiredとactualを混ぜない**ことを守る(observed情報をcatalogに書き戻さない)。
 
 ## rulebook本文をrepoに置かない(厳守)
 
 rulebookは個人利用の範囲で複製しているものなので、**PDF本体をrepositoryに置かない**。
 
 ```text
-repo : metadataのみ (documents.yaml, front matter)
+repo : metadataのみ (catalog/, front matter)
 R2   : rulebook PDF / page image / 変換後の全文Markdown
 ```
 
 PDFから生成したpage-aware Markdown(§13)やpage imageも**rulebook本文の複製**なので、同様にrepoへ置かずR2に置く。front matterは変換pipelineが書き込む。
 
 `.gitignore`で拡張子レベルの事故は防いでいるが、変換後Markdownは拡張子で判別できないため、**sync CLIがrepo内にbytesを書き出さない**設計にする。
+
 ---
 
 # 5. Ingest経路
@@ -158,7 +159,7 @@ PDFから生成したpage-aware Markdown(§13)やpage imageも**rulebook本文�
 catalogがgit上にあるため、catalogの変更はR2 eventでは検知できない。したがってingestは**sync CLIによるreconcile**を主経路とする。
 
 ```text
-documents.yaml (desired)  +  R2 (bytes)
+catalog (desired)  +  R2 (bytes)
                 ↓
             sync CLI
                 ↓
@@ -189,6 +190,7 @@ Queueを挟む理由はOpenAI API一時障害 / rate limit / retry / DLQ / 疎�
 しかしcatalogがgit上にある構成では、この経路が担当できるのは「R2へ直接ファイルを置いた場合の自動取り込み」だけになる。人の手間もsync CLIとほぼ変わらないため、**v1では実装しない**。
 
 R2へのドラッグ&ドロップ運用が実際に不便になった段階で追加する。reconcileが冪等なので、後から足してもsync CLIと共存できる。
+
 ---
 
 # 6. R2のファイル構造とmetadataの持ち場所
@@ -226,28 +228,33 @@ games/
 
 | 形式 | metadataの場所 |
 |---|---|
-| PDF / 画像 (metadataを持てない) | repoの`documents.yaml`に宣言 |
+| PDF / 画像 (metadataを持てない) | repoの`catalog/documents/<game_id>.yaml`に宣言 |
 | Markdown (metadataを持てる) | file内のYAML front matter |
 
-content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的にdocuments.yaml側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
+content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的にcatalog側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
 
 crawlerが生成するファイルは必ずfile内にmetadata sectionを持つ(§26)。
 
-## documents.yaml
+## document catalog (catalog/documents/<game_id>.yaml)
 
-repoに置く。宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(§4)。
+repoに置く。**game 1つにつき1ファイル**とする。1ファイルに全gameを並べると、game追加やcrawlerによる追記で編集が競合するため。
+
+宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(§4)。
 
 ```yaml
+# catalog/documents/nusfjord.yaml
 version: 1
+game_id: nusfjord
 
 documents:
   - key: games/nusfjord/rulebook-ja.pdf
-    game_id: nusfjord
     content_type: rulebook
     authority: official
     language: ja
     edition: bigbox
 ```
+
+`game_id`はファイル名から導出せず**中に明記する**(pathから導出しないという原則を、catalog側でも守る)。ファイル名と`game_id`の一致はschemaでvalidationする。
 
 YAMLを採る理由はコメントが書けること。「このFAQはpublisher見解なのでauthority=publisher」といった判断理由をmetadataの隣に残せる。
 
@@ -255,7 +262,8 @@ YAMLを採る理由はコメントが書けること。「このFAQはpublisher�
 
 ## derived artifactは宣言しない
 
-PDFから生成したpage-aware Markdownやpage imageはderived artifactなので手で宣言しない。変換pipelineが元PDFのmetadataをfront matterとして継承させる。documents.yamlが宣言するのはsourceのみ。
+PDFから生成したpage-aware Markdownやpage imageはderived artifactなので手で宣言しない。変換pipelineが元PDFのmetadataをfront matterとして継承させる。catalogが宣言するのはsourceのみ。
+
 ---
 
 # 7. Vector Store
@@ -817,6 +825,7 @@ Strategy documentは:
 例:
 
 ```markdown
+
 ---
 schema_version: 1
 game_id: agricola
@@ -841,6 +850,7 @@ topics:
 
 cards:
   - braggart
+
 ---
 
 本文
@@ -1188,6 +1198,7 @@ Chat Adapter
 > **Ruleについては厳密な裁定者、Strategyについては根拠を持った分析者として振る舞うボードゲーム専門AI**
 
 とする。
+
 ---
 
 # 37. 付録: 初期案から引き継いだ細目
@@ -1272,3 +1283,95 @@ Visionで再確認
 ```
 
 そのためpage番号は可能な限り保持する。
+
+---
+
+# 38. ディレクトリ構成
+
+```text
+.
+├── catalog/                    # 宣言(desired state)。人が編集 + schema validation
+│   ├── games.yaml              #   §16: game識別 (aliases, identifying terms)
+│   ├── documents/              #   §6: game 1つにつき1ファイル
+│   │   └── <game_id>.yaml
+│   └── schema/                 #   JSON Schema
+├── evals/                      # eval dataset (yaml)。コードではなくデータ
+├── docs/
+├── src/tribunal/
+│   ├── entrypoints/            # uvicorn 起動対象 (platformごと)
+│   ├── app_factory.py
+│   ├── adapters/               # inbound: chat platform
+│   │   └── slack/
+│   ├── application/            # platform非依存のorchestration
+│   │   ├── answer_service.py   #   adapterが触る唯一の入口
+│   │   ├── ports.py            #   差し替え点のProtocol
+│   │   ├── pipeline/           #   game_resolver / standalone_question / intent_router / decomposition
+│   │   ├── rule/               #   Rule Adjudicator (+ prompts/)
+│   │   └── strategy/           #   Strategy Analyst (+ prompts/)
+│   ├── domain/                 # Game, Document, Answer, Source, ContentType, Authority
+│   ├── infra/                  # outbound: 外部システムのclient
+│   │   ├── openai/             #   files / vector_store / responses / retrieval
+│   │   └── r2/
+│   ├── knowledge/              # catalog読み込み / front matter / reconcileの差分計算
+│   ├── eval/                   # eval runner
+│   └── cli/                    # sync / gc / doctor / eval
+└── tests/
+```
+
+依存方向:
+
+```text
+entrypoints → adapters → application → domain
+                              ↓ (ports経由)
+                            infra
+cli → knowledge → infra
+```
+
+## inboundとoutboundを名前で分ける
+
+`adapters/`は**呼ばれる側**(Slack / Discord)だけに使う。OpenAIやR2のような**呼ぶ側**は`infra/`に置く。
+
+両方を`adapters/`に入れると、依存方向が逆のものが同居して(`adapters/slack`はapplicationを呼び、`adapters/openai`はapplicationから呼ばれる)レイヤ規約が読めなくなる。
+
+## portを切るのはretrievalだけ
+
+E1(Responses APIの`file_search`) → E2(明示的Retrieval API)で**実装が2つになることが確定している**ため、retrievalは`application/ports.py`にProtocolを置き、実装を`infra/openai/`側に寄せる。
+
+それ以外は必要になるまでProtocolを作らない。個人プロジェクトで全レイヤにportを切るのは過剰。
+
+## knowledge / cliはbot runtimeから切り離す
+
+ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogにも触らない**(§5)。
+
+したがって`adapters/` `application/`から`knowledge/`への import が生えたら設計が壊れたサイン。逆(`cli/` → `knowledge/` → `infra/`)は正常。
+
+## catalog / evalsはrepo直下に置く
+
+どちらも「人が宣言・レビューするデータ」でコードではないため、`src/`の中に入れない。schema validationをCIに載せるときの対象も明確になる。
+
+**repoに置くのはmetadataだけ**という原則(§4)が、ディレクトリの見た目からも分かる状態を保つ。
+
+## protocol promptは.mdファイルとして使う側にcolocateする
+
+Rule Adjudicator Protocolはevalで前後比較する対象なので、コード内の文字列リテラルにせず`.md`として置き実行時に読む。
+
+```text
+application/rule/prompts/adjudicator.md
+application/rule/prompts/answer_format.md
+application/strategy/prompts/analyst.md
+```
+
+diffがreviewで見え、eval結果と紐づけられる。
+
+## 名前
+
+プロダクト名 / import package = **tribunal**(裁定所)。Rule Adjudicator(§9)を中心に据えた性格をそのまま名前にしている。
+
+```text
+package : tribunal          (src/tribunal/)
+起動対象 : tribunal.entrypoints.slack:app
+repo    : github.com/Sho2010/tribunal
+Sprite  : tribunal          (URL: tribunal-<org-id>.sprites.app)
+```
+
+Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わり、SlackのRequest URL再設定とURL verificationのやり直しが必要になる**ため、まだ何も作っていない段階で揃えておくのが安い。
