@@ -8,7 +8,7 @@ Slack（将来的に Discord）からボードゲームのルール / 戦略を�
 
 ゴールは「ルールブック検索 bot」ではなく、**Rule については厳密な裁定者、Strategy については根拠を持った分析者**として振る舞うこと。
 
-現状は **M1（骨組み段階）**: Slack の `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / games.yaml はすべて未実装。
+コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / `documents.yaml` はすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
 
 ## コマンド
 
@@ -24,7 +24,7 @@ curl localhost:8080/                                             # health: {"sta
 ## ドキュメント
 
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
-2. **`docs/tasks.md`** — 実装タスクの分解と推奨実装順。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う設計になっている。次に何をやるかはここを見る。
+2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。

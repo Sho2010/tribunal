@@ -1,5 +1,114 @@
 # ボードゲームAI 実装タスクリスト
 
+> タスクは A〜O の分解、**着手順は以下の Phase** を見る。Phase は「何ができるようになるか」の単位で、
+> 各 Phase は完了条件を満たした時点で終わり。Phase をまたいで先に進めない訳ではないが、
+> **完了条件を観測してから次へ行く**（特に Phase 2 の eval を飛ばすと以降の改善が測れなくなる）。
+>
+> Claude / Codex へ渡す単位は、Phase ではなく `A1`, `C3`, `D2` のような**小見出し 1 つ**。
+
+# Phase (機能マイルストーン)
+
+## Phase 0. 疎通 (Sprites + Slack)
+
+**最優先。** RAG より先に、常駐と wake の挙動を実機で確認する。
+
+- Sprite 上で service として起動(`note.md` の runbook)
+- public URL + Slack Event Subscriptions
+- `app_mention` → 固定応答
+- A1 の一部(Sprites 上で起動できる最小構成)
+
+完了条件:
+
+- Slack で mention → 固定応答が thread に返る
+- 30 秒放置して warm に落ちたあと、再 mention で wake して応答する
+- cold wake でも service が自動再起動し、手動操作が不要
+
+## Phase 1. 1ゲームのルールに答えられる (最小 Rule RAG の縦切り)
+
+精度は後回しで、**R2 → sync → Vector Store → Slack 回答**の経路を一本通す。
+
+- A1 残り(lint / format / type check / test)、A2 ドメインモデル
+- B1 / B2 `games.yaml`
+- C1 / C2 R2、C3 / C4 `documents.yaml`
+- D1 Vector Store、D2 sync CLI
+- E1 Responses API + File Search
+- H1 Slack mention → `AnswerService.ask()` 接続
+
+この Phase では **game_id はユーザーが明示する**前提でよい(GameResolver は Phase 3)。
+
+完了条件:
+
+- 1 ゲームの rulebook を R2 に置き `documents.yaml` に宣言 → `sync` → Slack でルール質問に出典付きで答える
+- `sync` を 2 回連続で実行しても差分が出ない(冪等の確認)
+- 宣言していない R2 object が ingest されない
+
+## Phase 2. 厳密な裁定者になる (品質を測れるようにする)
+
+ここが本題。**先に eval を作る**ことで、以降の改善が「体感」でなく数字になる。
+
+- G1 生 PDF での baseline 評価
+- O1 Rule Eval Dataset(20〜50 問)、O2 Retrieval Eval、O3 Adjudication Eval
+- F1 Rule Adjudicator Protocol、F2 回答フォーマット
+
+完了条件:
+
+- baseline の数値が出ている
+- Adjudicator Protocol の適用前後で差分が測れる
+- 誤答を retrieval miss / reasoning miss に切り分けられる
+
+## Phase 3. 会話として使える (Chat UX)
+
+毎回ゲーム名を書かず、thread で追い質問できる状態にする。
+
+- B3 GameResolver
+- H2 thread conversation、H3 standalone question 生成
+- J1 Query Pipeline、J2 Intent Router
+
+完了条件:
+
+- thread で「じゃあ2人戦だと？」が意図通り解決される
+- ゲーム名を書かなくても解決される / 曖昧なら聞き返す
+- 過去の Bot 回答がルール根拠として使われていない
+
+## Phase 4. retrieval を改善する
+
+Phase 2 の eval が下支えになっている前提で着手する。
+
+- E2 Explicit Retrieval API、E3 Multi-query Retrieval
+- 必要なら G2 page-aware Markdown
+
+完了条件:
+
+- retrieved chunk と score をアプリ側で確認できる
+- O2 / O3 の数値が baseline から改善している
+
+## Phase 5. Strategy に答えられる
+
+Rule と混ざらないことを保ちながら、別系統として足す。
+
+- K1〜K3 Strategy document / schema / R2 構造
+- L1〜L3 crawler
+- M1 Strategy 専用 Vector Store、M2 Strategy Analyst Protocol、M3 Hybrid Query
+- N1 / N2 ゲーム別拡張
+
+完了条件:
+
+- 戦略質問に前提 / 評価軸 / 複数候補 / trade-off を明示して答える
+- Rule 回答に community / personal の情報がルール根拠として混入しない
+
+## Phase X. 必要になったらやる
+
+不便になるまで着手しない。
+
+- D3 R2 event driven ingest(R2 直置き運用が欲しくなったら)
+- I1 / I2 Discord
+- G3 Vision preprocessing、N3 structured play data
+- O4 モデル比較(Retrieval / Protocol / Context を改善した後で)
+
+---
+
+# タスク分解
+
 ## A. 基盤・リポジトリ
 
 ### A1. Pythonプロジェクトの初期構成
@@ -565,30 +674,3 @@ reasoning effort差
 ※ Terra / Sol は OpenAI ChatGPT 5.6 世代のモデル名。
 
 を比較。
-
----
-
-# 推奨実装順
-
-依存関係を考えると、まず以下です。
-
-```text
-1. A1 Python project
-2. B1/B2 games.yaml
-3. C1/C2 R2
-4. C3/C4 documents.yaml
-5. D1 OpenAI Vector Store
-6. D2 sync CLI
-7. E1 basic RAG
-8. F Rule Adjudicator
-9. O Rule Eval
-10. B3 GameResolver
-11. H Slack Adapter / thread
-12. E2/E3 Retrieval改善
-13. K Strategy document (front matter)
-14. L Strategy crawler
-15. M Strategy Analyst
-16. 必要になったら D3 event ingest / Discord / Vision / structured statistics
-```
-
-特に **Claude / Codexへ渡す単位としては、この `A1`, `B1`, `D2` のような小見出し1つを1タスク** と考えるのがよい。
