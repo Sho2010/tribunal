@@ -221,3 +221,6 @@ __marimo__/
 
 # sprite setting
 .sprite
+
+*.pdf
+*.epub
