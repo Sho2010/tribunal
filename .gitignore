@@ -224,3 +224,6 @@ __marimo__/
 
 *.pdf
 *.epub
+
+# claude --worktree の worktree 置き場（docs/workflow/branching.md）
+.claude/worktrees/
