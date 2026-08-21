@@ -10,9 +10,49 @@ dependencies = [
     "python-dotenv>=1.0",
 ]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "pytest>=8.3",
+    "httpx>=0.27",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tribunal"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle
+    "F",      # pyflakes
+    "I",      # isort
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "TID252", # flake8-tidy-imports: 相対 import 禁止（レイヤの依存方向を追いやすくする / arch §38）
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+files = ["src", "tests"]
+python_version = "3.11"
+strict = true
+
+# slack_bolt / slack_sdk は型スタブを同梱しない（py.typed なし）。
+# strict を全体で緩めず、この 2 module だけ許容する。
+[[tool.mypy.overrides]]
+module = ["slack_bolt.*", "slack_sdk.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

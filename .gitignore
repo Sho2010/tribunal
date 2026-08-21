@@ -229,3 +229,6 @@ __marimo__/
 # 変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計で担保する
 *.pdf
 *.epub
+
+# claude --worktree の worktree 置き場（docs/workflow/branching.md）
+.claude/worktrees/

@@ -13,13 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## コマンド
 
 ```bash
-uv sync                                                          # 依存同期
+uv sync --group dev                                              # 依存同期（dev ツール込み）
 uv run uvicorn tribunal.entrypoints.slack:app --port 8080 --reload    # ローカル起動（.env を読む）
 curl localhost:8080/                                             # health: {"status":"ok","platforms":["slack"]}
 ```
 
+lint / format / type check / test（CI で回るのと同じ 4 つ）:
+
+```bash
+uv run ruff check .          # lint（--fix で自動修正）
+uv run ruff format --check . # format 確認（--check を外すと整形）
+uv run mypy                  # type check（strict。対象は pyproject の files=）
+uv run pytest                # test
+```
+
 - 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/tribunal/entrypoints/slack.py`）が行う。
-- テスト / lint / formatter はまだ導入されていない（tasks.md A1 の残タスク）。構文チェックだけなら `uv run python -m py_compile <files>`。
+- dev 依存は `[dependency-groups]` の `dev`（uv のネイティブな置き場所。`[project.optional-dependencies]` ではない）。
+- mypy は `strict`。型スタブを同梱しない `slack_bolt` / `slack_sdk` だけ module 単位で `ignore_missing_imports` を許容している（全体を緩めない）。
+- ruff は `E` / `F` / `I` / `UP` / `B` に加えて **相対 import 禁止（`TID252`）**。レイヤの依存方向を import 文から追える状態を保つため。line-length は 100。
+- CI は `.github/workflows/ci.yml`。**Python 3.11**（`requires-python` の下限）で上記 4 つを実行する。
 
 ## 開発の進め方
 
@@ -94,7 +106,7 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
-- `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。module import 時に `os.environ[...]` を読むので、**import しただけで Slack の env が必須になる**点に注意。
+- `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。
 - `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
 - `src/tribunal/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/tribunal/main.py` は slack entrypoint を re-export する後方互換シム。
 
