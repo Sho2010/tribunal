@@ -50,6 +50,13 @@ tasks.md A1 のうち、Python プロジェクト作成・ディレクトリ骨�
 - CI で同じものが回る
 - CLAUDE.md のコマンド節が実態と一致している
 
+自走させるなら:
+
+```text
+/goal uv run ruff check . と uv run ruff format --check . と uv run mypy と uv run pytest が
+すべて成功し、GitHub Actions の workflow が追加され、CLAUDE.md のコマンド節が更新され、PR が立っている
+```
+
 ## 参照
 
 - arch §38（ディレクトリ構成、レイヤの依存方向、port を切るのは retrieval だけ）
