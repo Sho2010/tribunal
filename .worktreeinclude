@@ -1,0 +1,3 @@
+# claude --worktree で作る worktree へコピーする gitignored ファイル。
+# worktree は fresh checkout なので、これが無いと .env が持ち込まれない。
+.env

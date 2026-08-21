@@ -21,11 +21,21 @@ curl localhost:8080/                                             # health: {"sta
 - 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/tribunal/entrypoints/slack.py`）が行う。
 - テスト / lint / formatter はまだ導入されていない（tasks.md A1 の残タスク）。構文チェックだけなら `uv run python -m py_compile <files>`。
 
+## 開発の進め方
+
+**`docs/tasks.md` の小見出し 1 つ（`A1`, `C3`, `D2`）= 1 ブランチ = 1 worktree = 1 セッション。** 詳細は `docs/workflow/branching.md`。
+
+- worktree は `claude --worktree <task-id>-<slug>` で作る。本体ツリーへの書き込みが機械的にブロックされる
+- **worktree 内では commit / push を確認なしで行ってよい。PR を立てるまで confirm 少なめで進める。** マージは PR 経由（ユーザーが review する）
+- **本体ツリー（main の作業ツリー）では commit しない。** worktree 内のファイルだけを触る（本体の読み取りは可）
+- PR 本文には「何を」だけでなく **なぜその設計にしたか** を書く
+
 ## ドキュメント
 
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
 2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
+4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`session-kickoff.md`（タスクセッションの立ち上げ方）、`tasks/<task-id>.md`（個別タスクの指示書）。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 
@@ -87,7 +97,7 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 
 ### 設計上ぶれさせない前提
 
-- **rulebook 本文を repo に置かない（厳守）。** 個人利用の範囲で複製しているものなので、PDF・page image・**PDF から生成した全文 Markdown** はすべて R2 のみに置く。repo に持つのは metadata だけ。`.gitignore` で `*.pdf` / `*.epub` / `games/` は弾いているが、変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計にする（arch §4）。
+- **rulebook 本文を repo に置かない（厳守）。** 個人利用の範囲で複製しているものなので、PDF・page image・**PDF から生成した全文 Markdown** はすべて R2 のみに置く。repo に持つのは metadata だけ。`.gitignore` で `*.pdf` / `*.epub` は弾いているが、変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計にする（arch §4）。`games/` は ignore しない（crawl 結果の保存と catalog を repo に置くため）。
 - **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`documents.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `documents.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index（arch §4）。
 - **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は repo の `documents.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため（arch §6）。`documents.yaml` は YAML 1.1 の暗黙型変換に注意（`language: no` が `False` になる）→ `safe_load` + JSON Schema で `type: string` を強制する。
 - **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（arch §5, tasks D2）。
@@ -108,4 +118,4 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 - Slack は 3 秒 ACK。wake レイテンシ（warm 100–500ms / cold 1–2s）があるので、重い処理を入れる段階では slack_bolt の lazy listener で即 ack する。
 - secret は Sprite のスナップショットに残る（専用 vault なし）。この割り切りは既に合意済み。
 
-`docs/` と `note.md` は現時点で git 未追跡（untracked）。ユーザーの明示的な依頼なしに add / 移動 / 削除しないこと。
+`note.md` はユーザー個人用のファイル。ユーザーの明示的な依頼なしに編集 / 移動 / 削除しないこと。

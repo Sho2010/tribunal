@@ -3,11 +3,16 @@
 > docs 調査で判明した修正済み版。詳細・出典は `docs/sprites.md`（§10）を参照。
 > 前提: ローカルに `sprite` CLI をインストール・認証済み。repo は git clone できる状態。
 
-## 1. Sprite を作る
+## 1. Sprite を作る, 繋ぐ
 ```bash
-sprite create bg-bot        # 名前は任意
-sprite use bg-bot           # 以降のデフォルト対象に
-sprite list                 # 確認
+sprite create tribunal        # 名前は任意
+sprite use tribunal           # 以降のデフォルト対象に
+sprite list                   # 確認
+```
+
+繋ぐ
+```
+sprite sessions --tty /bin/bash
 ```
 
 ## 2. コードを Sprite に載せる
@@ -28,7 +33,7 @@ sprite exec -- bash -c "cd /home/sprite/bg-bot && ~/.local/bin/uv sync"
 `exec` の foreground 起動は **sleep でプロセスが死ぬ**（RAM/プロセスは pause で失われる）。
 常駐は Service にする → wake 時に自動再起動される。secret は起動時 env 注入（ファイル直置きなし）。
 ```bash
-sprite exec -- sprite-env services create slackbot \
+sprite exec -- sprite-env services create tribunal \
   --cmd /home/sprite/.local/bin/uv \
   --args "run,uvicorn,src.entrypoints.slack:app,--host,0.0.0.0,--port,8080" \
   --dir /home/sprite/bg-bot \
