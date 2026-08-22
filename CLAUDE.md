@@ -52,7 +52,7 @@ uv run pytest                # test
 - ❌ 「D2（sync CLI）をやりますか」— 括弧で補っても識別子を先に出さない
 
 識別子を書いてよいのは、**人間向けの散文ではない場所**だけ:
-branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身、`docs/workflow/tasks/<task-id>.md`。
+branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 これらに触れる必要があるときも、会話文では「sync CLI のブランチ」のように内容で呼ぶ。
 
 ユーザーが `D2` のように識別子で指してきた場合は、**こちらの返答では内容に開いて答える**
@@ -78,7 +78,8 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身、`docs/workfl
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。現時点の合意はこれを見る（下の「設計 doc は書き換える前提」も読む）。
 2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
-4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）、`session-kickoff.md`（タスクセッションの立ち上げ方）、`tasks/<task-id>.md`（個別タスクの指示書）。
+4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）。
+5. **`docs/context.md`** — Rule 回答の元プロンプト（実験で効果が確認できたもの）。Rule Adjudicator Protocol を実装するときはこの原文を正とする。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 
