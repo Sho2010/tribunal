@@ -577,7 +577,7 @@ edition aliases
 version: 1
 
 games:
-  nusfjord:
+  - id: nusfjord
     name: Nusfjord
     aliases:
       - ヌースフィヨルド
@@ -589,11 +589,25 @@ games:
       - Serve Fish
       - 長老
       - Elder
+
+    editions:
+      - id: base
+        name: Nusfjord
+        default: true
+      - id: bigbox
+        name: Nusfjord Big Box
 ```
+
+`games`はmappingではなくlistにし、`game_id`は`id`として中に明記する。
+
+- mapping keyだと重複`game_id`が`safe_load`の時点でsilentlyに後勝ちする。検出するにはloader差し替えが要る
+- `documents.yaml`(§6)と形が揃う。あちらも`game_id`をファイル名から導出せず中に明記している
+
+`editions`はoptional。版を区別しないゲームで空の宣言を強制しない。
 
 `games.yaml`は小さく安定したcatalogとして扱う。
 
-JSON Schemaも用意しvalidationする。
+JSON Schemaも用意しvalidationする(tasks B2)。
 
 ---
 
