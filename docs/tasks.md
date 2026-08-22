@@ -25,21 +25,23 @@
 
 ## Phase 1. 1ゲームのルールに答えられる (最小 Rule RAG の縦切り)
 
-精度は後回しで、**R2 → sync → Vector Store → Slack 回答**の経路を一本通す。
+精度は後回しで、**R2 → Vector Store → Slack 回答**の経路を一本通す。
 
 - A1 残り(lint / format / type check / test)、A2 ドメインモデル
 - B1 / B2 `games.yaml`
-- C1 / C2 R2、C3 / C4 `documents.yaml`
-- D1 Vector Store、D2 sync CLI
+- C1 R2 ディレクトリ設計、C3 / C4 `documents.yaml`
+- D1 Vector Store
 - E1 Responses API + File Search
 - H1 Slack mention → `AnswerService.ask()` 接続
 
 この Phase では **game_id はユーザーが明示する**前提でよい(GameResolver は Phase 3)。
 
+**R2 への配置と Vector Store への登録は手作業でよい。** この Phase で扱うのは 1 ゲームの rulebook
+数件なので、差分を取る仕組み(C2 / D2)は Phase 5 へ送った。改訂は数年に一度で、人が差し替えれば済む。
+
 完了条件:
 
-- 1 ゲームの rulebook を R2 に置き `documents.yaml` に宣言 → `sync` → Slack でルール質問に出典付きで答える
-- `sync` を 2 回連続で実行しても差分が出ない(冪等の確認)
+- 1 ゲームの rulebook を R2 に置き `documents.yaml` に宣言 → 手動で Vector Store に載せる → Slack でルール質問に出典付きで答える
 - 宣言していない R2 object が ingest されない
 
 ## Phase 2. 厳密な裁定者になる (品質を測れるようにする)
@@ -86,15 +88,20 @@ Phase 2 の eval が下支えになっている前提で着手する。
 
 Rule と混ざらないことを保ちながら、別系統として足す。
 
+crawl で件数が増え、**人が把握しきれなくなる**のがこの Phase。差分を取る仕組みが必要になるのはここから。
+
+- C2 R2 クライアント、D2 sync CLI(Phase 1 から移動)
 - K1〜K3 Strategy document / schema / R2 構造
 - L1〜L3 crawler
 - M1 Strategy 専用 Vector Store、M2 Strategy Analyst Protocol、M3 Hybrid Query
 - N1 / N2 ゲーム別拡張
+- D4 GC / 整合性チェック(宣言漏れを人がたまに検査する)
 
 完了条件:
 
 - 戦略質問に前提 / 評価軸 / 複数候補 / trade-off を明示して答える
 - Rule 回答に community / personal の情報がルール根拠として混入しない
+- `sync` を 2 回連続で実行しても差分が出ない(冪等の確認)
 
 ## Phase X. 必要になったらやる
 
@@ -156,6 +163,7 @@ Sprite はまだ作成していないので、`note.md` の runbook 通り`sprit
 - edition情報
 
 ### B2. `games.yaml` JSON Schema
+**pending**
 - schema validation
 - duplicate/default edition等の追加validation
 
@@ -189,21 +197,20 @@ Unknown
 ## C. R2 Storage
 
 ### C1. R2ディレクトリ設計
-pathはlocatorとして扱い、metadataを導出しない(arch §6)。`game_id` prefixのみ維持する。
+**done** — arch §6 に記載。
 
 ```text
-games/
-  nusfjord/
-    rulebook-ja.pdf
-    faq-ja.pdf
-    strategy/
-      bgg/
-      personal/
+games/<game_id>/{rule,strategy,raw}/
 ```
+
+各区分の意味・下位はフラット / 命名自由・pathの区分とcatalogのmetadataが別物である理由は arch §6 を見る。
 
 **rulebook PDF / page image / 変換後の全文Markdownはrepoに置かない**(arch §4, 厳守)。
 
 ### C2. R2クライアント
+**pending (Phase 5)** — R2 を読むのは sync CLI(D2)だけで、その D2 が Phase 5 送りのため呼び出し側がいない。
+Phase 1 の範囲(rulebook 数件)は手作業で配置する。
+
 - upload
 - get
 - list (ETag取得含む)
@@ -220,7 +227,7 @@ version: 1
 game_id: nusfjord
 
 documents:
-  - key: games/nusfjord/rulebook-ja.pdf
+  - key: games/nusfjord/rule/rulebook-ja.pdf
     content_type: rulebook
     authority: official
     language: ja
@@ -248,6 +255,9 @@ documents:
 - delete
 
 ### D2. sync CLI(ingest主経路)
+**pending (Phase 5)** — 差分方式が効くのは、件数が増えて人が把握しきれなくなってから。
+Phase 1 の範囲(rulebook 数件 / 改訂は数年に一度)では手作業で足りる。crawl を始める Phase 5 で作る。
+
 `documents.yaml` + Markdown front matter(desired)とVector Store(actual)のdiffを取って適用する。冪等。
 
 ```text
@@ -268,6 +278,9 @@ R2 object create/delete → Event Notification → Cloudflare Queue → Worker
 ```
 
 ### D4. GC / 整合性チェック
+**pending (Phase 5)。人がたまに手で流す**もので、自動実行やCIには載せない。
+宣言漏れは Phase 1 の規模なら bot が答えないことで気づくが、crawl で件数が増えると取りこぼす。
+
 D2のreconcileで拾えない残骸を掃除する。
 
 - orphan OpenAI File(どのVector Storeからも参照されていない)

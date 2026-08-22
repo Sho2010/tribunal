@@ -40,7 +40,23 @@ uv run pytest                # test
 - worktree は `claude --worktree <task-id>-<slug>` で作る。本体ツリーへの書き込みが機械的にブロックされる
 - **worktree 内では commit / push を確認なしで行ってよい。PR を立てるまで confirm 少なめで進める。** マージは PR 経由（ユーザーが review する）
 - **本体ツリー（main の作業ツリー）では commit しない。** worktree 内のファイルだけを触る（本体の読み取りは可）
-- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は arch doc 側。型は `docs/workflow/pr-template.md`
+- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は arch doc 側。**タスク識別子（`A1` / `B1` …）は本文に書かない**（branch 名と title にある）。型は `docs/workflow/pr-template.md`
+
+### タスク識別子で会話しない（厳守）
+
+**ユーザーとの議論・説明・提案では `A1` / `C3` / `D2` のような `docs/tasks.md` の識別子を使わない。**
+ユーザーは番号を覚えていないので、識別子だけ言われても何の話か分からない。
+
+- ✅ 「Vector Store の sync CLI（desired と actual の diff を取って適用するやつ）をやりますか」
+- ❌ 「次は D2 をやりますか」
+- ❌ 「D2（sync CLI）をやりますか」— 括弧で補っても識別子を先に出さない
+
+識別子を書いてよいのは、**人間向けの散文ではない場所**だけ:
+branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身、`docs/workflow/tasks/<task-id>.md`。
+これらに触れる必要があるときも、会話文では「sync CLI のブランチ」のように内容で呼ぶ。
+
+ユーザーが `D2` のように識別子で指してきた場合は、**こちらの返答では内容に開いて答える**
+（「sync CLI ですね。〜」）。
 
 ### コメント / docstring
 
