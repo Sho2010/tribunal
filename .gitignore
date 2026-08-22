@@ -225,8 +225,10 @@ __marimo__/
 # Claude Code の worktree 置き場（claude --worktree が使う）
 .claude/worktrees/
 
-# rulebook 本文を repo に置かない（arch §4, 厳守）
-# 変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計で担保する
+games/*/rule/
+games/*/strategy/
+games/*/raw/
+
 *.pdf
 *.epub
 

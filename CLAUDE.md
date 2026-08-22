@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ゴールは「ルールブック検索 bot」ではなく、**Rule については厳密な裁定者、Strategy については根拠を持った分析者**として振る舞うこと。
 
-コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / catalog はすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
+コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / `games/` の読み込みはすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
 
 ## コマンド
 
@@ -75,19 +75,37 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身、`docs/workfl
 
 ## ドキュメント
 
-1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
+1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。現時点の合意はこれを見る（下の「設計 doc は書き換える前提」も読む）。
 2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
 4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）、`session-kickoff.md`（タスクセッションの立ち上げ方）、`tasks/<task-id>.md`（個別タスクの指示書）。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 
-### 採らない案（提案し直さないこと）
+### 設計 doc は書き換える前提（重要）
 
-検討して却下された判断。理由付きで潰れているので、再提案する前に arch doc の該当節を読む。
+**arch doc は作業を進めるための足場であって、守るべき制約ではない。** 手を動かして実情が見えた結果
+「こっちのほうがいい」となったら、**doc のほうを変える**。実装を doc に合わせて捻じ曲げない。
+
+書かれている内容は、多くが**手を動かす前に想像で決めたもの**。実際にファイルを並べてみる / 使う人の動きを
+追う段階で前提が変わるのは正常で、そのとき doc が古くなるのは織り込み済み。
+
+- **doc に書いてあることを理由に「できません」と言わない。** 良い案なら提案する。
+  「arch §N にこう書いてあるので」は、**議論を止める根拠にはならない**
+- 実装と doc がズレたら、**doc を直すのが既定**。ズレたまま放置しない
+- ただし**黙って変えない**。「実情に合わないので arch §N をこう変えたい」と言ってから変える
+- 変えたら理由も doc に残す。次に読む人（Claude 含む）が同じ議論を蒸し返さないため
+
+下の「採らない案」も同じ。**却下の理由が今も成立するか**を見て、崩れているなら再提案してよい。
+禁止リストではなく「一度潰れているので、蒸し返すなら理由を確認してから」という意味。
+
+### 一度却下された案
+
+検討して却下された判断。理由付きで潰れているので、**再提案する前に arch doc の該当節を読み、
+却下の理由が今も成立するか確認する**。成立しているなら蒸し返さない。崩れているなら提案してよい。
 
 - **SQLite を knowledge catalog にしない。** 同じ情報を複数箇所で mutable に持つ不整合を避けるため（arch §4）。会話履歴 DB も持たない（Slack thread から取得、arch §17）。
-- **R2 の path から metadata を導出しない。** path を metadata schema にすると typo が silently 通り、次元を足すと全 path の move + 再 ingest になる。しかも player_count / edition / 多言語は階層に収まらないので機構が 2 つに増える（arch §6）。path は locator（`game_id` prefix のみ）。
+- **R2 の path から metadata を導出しない。** path を metadata schema にすると typo が silently 通り、次元を足すと全 path の move + 再 ingest になる。しかも player_count / edition / 多言語は階層に収まらないので機構が 2 つに増える（arch §6）。path は locator。ただし **`rule` / `strategy` / `raw` の 3 区分は人が整理するために置く**（機械が参照するのは `meta.yaml` の宣言だけ）。
 - **単一 Vector Store + attributes で済ませない。** Rule / Strategy Store を分離する（arch §8）。理由は検索性能ではなく trust boundary。
 - **event driven ingest（R2 Event → Cloudflare Queue → Worker）を v1 で作らない。** catalog が git 上にあるので、この経路が担当できるのは「R2 へ直接置いた場合の自動取り込み」だけで、人の手間は sync CLI と変わらない（arch §5, tasks D3 は保留）。
 - **File Search の結果からそのまま回答させない。** query decomposition → multi-query retrieval → Rule Adjudicator（arch §9, §10, §34）。
@@ -98,7 +116,7 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身、`docs/workfl
 レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。全体のディレクトリ構成は arch §38（現状は下記の一部だけが存在する）。
 
 ```text
-catalog/              # 宣言データ (games.yaml, documents/<game_id>.yaml, schema/)
+games/                # games.yaml, schema/, <game_id>/{meta.yaml, rule/, strategy/, raw/}
 evals/                # eval dataset
 src/tribunal/
   entrypoints/        # uvicorn 起動対象
@@ -106,17 +124,17 @@ src/tribunal/
   application/        # answer_service.py, ports.py, pipeline/, rule/, strategy/
   domain/
   infra/              # outbound: openai/, r2/
-  knowledge/          # catalog 読み込み / front matter / reconcile
+  knowledge/          # meta.yaml 読み込み / front matter / reconcile
   eval/  cli/
 ```
 
 命名で守ること:
 
 - **`adapters/` は inbound（呼ばれる側）専用。** OpenAI / R2 のような outbound client は `infra/` に置く。両方を adapters に入れると依存方向が逆のものが同居する。
-- **`adapters/` `application/` から `knowledge/` を import しない。** ingest は手元 / CI で走り、Sprite 上の bot は R2 も catalog も触らない。逆向き（`cli/` → `knowledge/` → `infra/`）は正常。
+- **`adapters/` `application/` から `knowledge/` を import しない。** ingest は手元 / CI で走り、Sprite 上の bot は R2 も `games/` も触らない。逆向き（`cli/` → `knowledge/` → `infra/`）は正常。
 - **port を切るのは retrieval だけ**（E1 の `file_search` → E2 の Retrieval API で実装が 2 つになるため）。他は必要になるまで Protocol を作らない。
 - **protocol prompt は `.md` ファイル**として使う側にコロケートし（`application/rule/prompts/adjudicator.md`）、コード内の文字列リテラルにしない。eval で前後比較する対象なので diff が見えることが要件。
-- **`catalog/` と `evals/` は `src/` の外**。人が宣言・レビューするデータでコードではない。
+- **`games/` と `evals/` は `src/` の外**。人が宣言・レビューするデータでコードではない。
 
 現在あるモジュール:
 
@@ -140,9 +158,9 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 
 ### 設計上ぶれさせない前提
 
-- **rulebook 本文を repo に置かない（厳守）。** 個人利用の範囲で複製しているものなので、PDF・page image・**PDF から生成した全文 Markdown** はすべて R2 のみに置く。repo に持つのは metadata だけ。`.gitignore` で `*.pdf` / `*.epub` は弾いているが、変換後 Markdown は拡張子で判別できないので、sync CLI が repo 内に bytes を書き出さない設計にする（arch §4）。`games/` は ignore しない（crawl 結果の保存と catalog を repo に置くため）。
-- **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`documents.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `documents.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index（arch §4）。
-- **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は repo の `documents.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため（arch §6）。`documents.yaml` は YAML 1.1 の暗黙型変換に注意（`language: no` が `False` になる）→ `safe_load` + JSON Schema で `type: string` を強制する。
+- **他人の著作物を push しない（厳守）。** 守るのは「GitHub に上げないこと」であって、**ローカルの作業ツリーに実体があるのは正常**（R2 へ upload する元が要る）。`games/<game_id>/` に metadata と bytes が同居し、`.gitignore` が `rule/` `strategy/` `raw/` を落とす。拡張子ではなく置き場所で無視するのは、変換後 Markdown や crawl 結果が拡張子で判別できないため（arch §4）。
+- **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`games/<game_id>/meta.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `meta.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index（arch §4）。
+- **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は `meta.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため（arch §6）。
 - **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（arch §5, tasks D2）。
 - **Rule と Strategy を混ぜない。** Rule 回答に community / personal の情報をルール根拠として混ぜない。Rule を Strategy corpus から推測しない。
 - **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol**（docs §9）を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は「結論 → 根拠 → 解釈 → 引用」、原則日本語。

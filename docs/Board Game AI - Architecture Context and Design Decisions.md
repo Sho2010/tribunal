@@ -120,13 +120,13 @@ Vector Storeが壊れてもR2から再構築できることを前提にする。
 
 ## catalog(desired state)はgitに置く
 
-metadataをR2のpathから導出する案は採らない(§6)。代わりにrepo内の`catalog/documents/<game_id>.yaml`にmetadataを宣言する。
+metadataをR2のpathから導出する案は採らない(§6)。代わりに`games/<game_id>/meta.yaml`にmetadataを宣言する。
 
 したがってSoTは役割ごとに分かれる。
 
 ```text
 document bytes  → R2
-desired catalog → git repo (catalog/documents/*.yaml / Markdownのfront matter)
+desired catalog → git repo (games/<game_id>/meta.yaml / Markdownのfront matter)
 actual state    → OpenAI Vector Store (file attributes)
 ```
 
@@ -137,18 +137,27 @@ catalogをgitに置く理由:
 
 RDBMS / SQLiteをKnowledge catalogとして持つ案は引き続き採用しない。避けたいのは同じ情報を複数箇所で**mutableに**持つことであり、上記3者は役割が異なる。**desiredとactualを混ぜない**ことを守る(observed情報をcatalogに書き戻さない)。
 
-## rulebook本文をrepoに置かない(厳守)
+## 他人の著作物をpushしない(厳守)
 
-rulebookは個人利用の範囲で複製しているものなので、**PDF本体をrepositoryに置かない**。
+rulebookは個人利用の範囲で複製しているもの。守るべきは**GitHubに上げないこと**であって、ローカルの作業ツリーに実体があること自体は問題ない。むしろR2へuploadする元がそこに要る。
 
 ```text
-repo : metadataのみ (catalog/, front matter)
-R2   : rulebook PDF / page image / 変換後の全文Markdown
+ローカル作業ツリー : metadata + bytes (実体がある)
+push対象           : metadataのみ
+R2                 : bytes (uploadの宛先)
 ```
 
-PDFから生成したpage-aware Markdown(§13)やpage imageも**rulebook本文の複製**なので、同様にrepoへ置かずR2に置く。front matterは変換pipelineが書き込む。
+したがって`games/<game_id>/`配下はbytesとmetadataが同居し、**`.gitignore`が境界を引く**。
 
-`.gitignore`で拡張子レベルの事故は防いでいるが、変換後Markdownは拡張子で判別できないため、**sync CLIがrepo内にbytesを書き出さない**設計にする。
+```gitignore
+games/*/rule/
+games/*/strategy/
+games/*/raw/
+```
+
+拡張子ではなく**置き場所で無視する**。PDFから生成したMarkdown(§13)やcrawl結果は拡張子で判別できないため、bytesが入るディレクトリごと落として`meta.yaml`だけを残す。
+
+この形にすると、ローカルのディレクトリがそのままR2の姿になるので、uploadは`games/<game_id>/`をそのまま同期するだけで済む。
 
 ---
 
@@ -193,7 +202,19 @@ R2へのドラッグ&ドロップ運用が実際に不便になった段階で�
 
 ---
 
-# 6. R2のファイル構造とmetadataの持ち場所
+# 6. ファイル構造とmetadataの持ち場所
+
+`games/<game_id>/`をローカル作業ツリーとR2で共通の単位とする。ローカルにはbytesとmetadataが同居し、pushされるのは`meta.yaml`だけ(§4)。
+
+```text
+games/
+  games.yaml              # game識別 (aliases, identifying terms, editions)。§16
+  <game_id>/
+    meta.yaml             # document宣言。これだけpushされる
+    rule/                 ┐
+    strategy/             │ .gitignore。R2へupload
+    raw/                  ┘
+```
 
 ## pathからmetadataを導出しない
 
@@ -213,33 +234,32 @@ R2へのドラッグ&ドロップ運用が実際に不便になった段階で�
 その下は**人が手で整理するための粗い区分**を3つ置く。
 
 ```text
-games/
-  <game_id>/
-    rule/        # 公式。rulebook / FAQ / errata。裁定の根拠になる
-    strategy/    # 非公式。前処理済みのplain text。ingest対象
-    raw/         # crawl生データ。ingest対象外。前処理のやり直し用
+<game_id>/
+  rule/        # 公式。rulebook / FAQ / errata。裁定の根拠になる
+  strategy/    # 非公式。前処理済みのplain text。ingest対象
+  raw/         # crawl生データ。ingest対象外。前処理のやり直し用
 ```
 
 - `rule` / `strategy`の境界は**trust boundary**。単なるジャンル分けではなく、Rule StoreとStrategy Storeを分離しているのと同じ線(§8)。ルール裁定の根拠にcommunity / personalの情報が混ざらないことを、置き場所の段階で保つ
-- `raw`は**処理段階**の区別。ingest対象かどうかがR2を開いた時点で分かる
+- `raw`は**処理段階**の区別。ingest対象かどうかがディレクトリを開いた時点で分かる
 - **各区分の下はフラットで、命名は自由。** editionをpathに出さない。中身は開けば分かる
 
 これはmetadataの導出元ではなく、単なる置き場所として扱う。
 
-## pathの区分とcatalogのmetadataは別物
+## pathの区分とmeta.yamlのmetadataは別物
 
 上記の3区分はpathに情報を出しているが、これは冒頭の「pathからmetadataを導出しない」に反しない。**粒度と読み手が違う**ため。
 
 | | 読み手 | 粒度 |
 |---|---|---|
-| pathの区分 | 人 (R2を開いて整理する) | `rule` / `strategy` / `raw` の3つ |
-| catalogの宣言 | 機械 (ingest / retrieval) | `content_type: rulebook \| faq \| errata`、`authority`、`language`、`edition` … |
+| pathの区分 | 人 (ディレクトリを開いて整理する) | `rule` / `strategy` / `raw` の3つ |
+| `meta.yaml`の宣言 | 機械 (ingest / retrieval) | `content_type: rulebook \| faq \| errata`、`authority`、`language`、`edition` … |
 
 原則が禁じているのは**pathをmetadata schemaの代わりにすること**、つまり機械がpathをparseして属性を得る状態である。それをやるとtypoが構造上validなまま静かに通り、次元を足すたびに全pathのmoveが要る。
 
 したがって:
 
-- **機械が参照するのはcatalogの宣言(とfront matter)だけ。** pathをparseして`content_type`を決めない
+- **機械が参照するのは`meta.yaml`の宣言(とfront matter)だけ。** pathをparseして`content_type`を決めない
 - pathの区分を増やしたくなっても、それはmetadataの次元追加ではない。3つで足りなくなった時点で考える
 
 ## metadataの持ち場所は「形式」で決める
@@ -248,43 +268,45 @@ games/
 
 | 形式 | metadataの場所 |
 |---|---|
-| PDF / 画像 (metadataを持てない) | repoの`catalog/documents/<game_id>.yaml`に宣言 |
+| PDF / 画像 (metadataを持てない) | `games/<game_id>/meta.yaml`に宣言 |
 | Markdown (metadataを持てる) | file内のYAML front matter |
 
-content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的にcatalog側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
+content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的に`meta.yaml`側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
 
 crawlerが生成するファイルは必ずfile内にmetadata sectionを持つ(§26)。
 
-## document catalog (catalog/documents/<game_id>.yaml)
+## document catalog (games/<game_id>/meta.yaml)
 
-repoに置く。**game 1つにつき1ファイル**とする。1ファイルに全gameを並べると、game追加やcrawlerによる追記で編集が競合するため。
+**game 1つにつき1ファイル**とし、そのgameのディレクトリ直下に置く。1ファイルに全gameを並べると、game追加やcrawlerによる追記で編集が競合するため。
 
 宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(§4)。
 
 ```yaml
-# catalog/documents/nusfjord.yaml
+# games/nusfjord/meta.yaml
 version: 1
 game_id: nusfjord
 
 documents:
-  - key: games/nusfjord/rule/rulebook-ja.pdf
+  - path: rule/rulebook-ja.pdf
     content_type: rulebook
     authority: official
     language: ja
     edition: bigbox
-  - key: games/nusfjord/rule/faq-2021.pdf
+  - path: rule/faq-2021.pdf
     content_type: faq
     authority: official
     language: en
 ```
 
-`key`の`rule/`は人が整理するための区分で、`content_type`(`rulebook` / `faq`)は機械が使う分類。**同じ`rule/`の下から粒度の違う`content_type`が出る**ので、pathをparseして`content_type`を決めてはいけない。
+`path`は`meta.yaml`からの相対。R2のkeyは`games/<game_id>/` + `path`で組み立てる。
 
-`game_id`はファイル名から導出せず**中に明記する**(pathから導出しないという原則を、catalog側でも守る)。ファイル名と`game_id`の一致はschemaでvalidationする。
+`path`の`rule/`は人が整理するための区分で、`content_type`(`rulebook` / `faq`)は機械が使う分類。**同じ`rule/`の下から粒度の違う`content_type`が出る**ので、pathをparseして`content_type`を決めてはいけない。
 
-YAMLを採る理由はコメントが書けること。「このFAQはpublisher見解なのでauthority=publisher」といった判断理由をmetadataの隣に残せる。
+`game_id`はディレクトリ名から導出せず**中に明記する**(pathから導出しないという原則を、宣言側でも守る)。ディレクトリ名と`game_id`の一致はschemaでvalidationする。
 
-ただしYAML 1.1の暗黙型変換に注意する。`language: no`(ノルウェー語)は`False`になるため、`yaml.safe_load`と`type: string`を要求するJSON Schemaで必ずvalidationし、静かに壊れない形にする。
+`edition`は**optional**。FAQやerrataは版に紐づかないことがあり、必須にすると嘘を書くことになる。
+
+YAMLを採る理由はコメントが書けること。「このFAQはpublisher見解なのでauthority=publisher」といった判断理由をmetadataの隣に残せる。`yaml.safe_load`とJSON Schemaでvalidationする。
 
 ## derived artifactは宣言しない
 
@@ -582,11 +604,11 @@ GameResolverの優先順位:
 
 ---
 
-# 16. games.yaml
+# 16. games/games.yaml
 
 GameResolver用のcatalog。
 
-Knowledge document一覧はここに持たせない。
+Knowledge document一覧はここに持たせない(gameごとの`meta.yaml`が持つ、§6)。
 
 役割:
 
@@ -627,7 +649,7 @@ games:
 `games`はmappingではなくlistにし、`game_id`は`id`として中に明記する。
 
 - mapping keyだと重複`game_id`が`safe_load`の時点でsilentlyに後勝ちする。検出するにはloader差し替えが要る
-- `documents.yaml`(§6)と形が揃う。あちらも`game_id`をファイル名から導出せず中に明記している
+- `meta.yaml`(§6)と形が揃う。あちらも`game_id`をディレクトリ名から導出せず中に明記している
 
 `editions`はoptional。版を区別しないゲームで空の宣言を強制しない。
 
@@ -1330,11 +1352,14 @@ Visionで再確認
 
 ```text
 .
-├── catalog/                    # 宣言(desired state)。人が編集 + schema validation
+├── games/                      # §6: gameごとのmetadata + bytes。bytesは.gitignore
 │   ├── games.yaml              #   §16: game識別 (aliases, identifying terms)
-│   ├── documents/              #   §6: game 1つにつき1ファイル
-│   │   └── <game_id>.yaml
-│   └── schema/                 #   JSON Schema
+│   ├── schema/                 #   JSON Schema
+│   └── <game_id>/
+│       ├── meta.yaml           #   document宣言。これだけpushされる
+│       ├── rule/               #   .gitignore。R2へupload
+│       ├── strategy/           #   .gitignore
+│       └── raw/                #   .gitignore。ingest対象外
 ├── evals/                      # eval dataset (yaml)。コードではなくデータ
 ├── docs/
 ├── src/tribunal/
@@ -1385,11 +1410,11 @@ ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogに�
 
 したがって`adapters/` `application/`から`knowledge/`への import が生えたら設計が壊れたサイン。逆(`cli/` → `knowledge/` → `infra/`)は正常。
 
-## catalog / evalsはrepo直下に置く
+## games / evalsはrepo直下に置く
 
 どちらも「人が宣言・レビューするデータ」でコードではないため、`src/`の中に入れない。schema validationをCIに載せるときの対象も明確になる。
 
-**repoに置くのはmetadataだけ**という原則(§4)が、ディレクトリの見た目からも分かる状態を保つ。
+`games/`はmetadataとbytesが同居するが、**pushされるのは`meta.yaml`と`games.yaml`だけ**(§4)。ローカルのディレクトリがそのままR2の姿になるので、uploadが単純になる。
 
 ## protocol promptは.mdファイルとして使う側にcolocateする
 

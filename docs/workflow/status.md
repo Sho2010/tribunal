@@ -19,11 +19,11 @@ git branch -a              # 何に着手済みか
 | A1 lint/format/typecheck/test | `a1-tooling` | なし | **済**（PR #1）。config が全 worktree に効くので、これが最初のボトルネックだった |
 | A2 ドメインモデル | `a2-domain` | A1 | arch §37（Authority / ContentType）, §38 |
 | B1+B2 games.yaml + Schema | `b-games-catalog` | A1 | arch §16 |
-| C1+C2 R2 設計 + client | `c-r2` | A1 | arch §4, §6 |
-| C3+C4 documents.yaml + Schema | `c-documents` | A2, C2 | arch §6。YAML 1.1 の `language: no` 問題 |
+| C1 R2 設計 | `c-r2` | A1 | **済**。arch §4, §6。C2 client は Phase 5 送り |
+| C3+C4 meta.yaml + Schema | `c-documents` | A2 | arch §6。`edition` は optional |
 | D1 Vector Store 基本 | `d1-vector-store` | A1 | arch §7 |
-| D2 sync CLI | `d2-sync-cli` | C2, C3, D1 | arch §5。冪等な reconcile |
-| E1 Responses API + File Search | `e1-file-search` | D2 | arch §11, §38（port を切るのは retrieval だけ） |
+| E1 Responses API + File Search | `e1-file-search` | D1 | arch §11, §38（port を切るのは retrieval だけ） |
+| C2 R2 client / D2 sync CLI | — | — | Phase 5（crawl で件数が増えてから） |
 | H1 Slack → AnswerService 接続 | `h1-slack-wiring` | E1 | arch §20, §21（3 秒 ACK） |
 
 ## 並行できる組み合わせ
