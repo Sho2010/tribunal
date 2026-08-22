@@ -210,17 +210,37 @@ R2へのドラッグ&ドロップ運用が実際に不便になった段階で�
 
 `game_id` prefixだけは維持する。per-gameのlist / delete、reconciliationが素直になるため。
 
+その下は**人が手で整理するための粗い区分**を3つ置く。
+
 ```text
 games/
-  nusfjord/
-    rulebook-ja.pdf
-    faq-ja.pdf
-    strategy/
-      bgg/
-      personal/
+  <game_id>/
+    rule/        # 公式。rulebook / FAQ / errata。裁定の根拠になる
+    strategy/    # 非公式。前処理済みのplain text。ingest対象
+    raw/         # crawl生データ。ingest対象外。前処理のやり直し用
 ```
 
+- `rule` / `strategy`の境界は**trust boundary**。単なるジャンル分けではなく、Rule StoreとStrategy Storeを分離しているのと同じ線(§8)。ルール裁定の根拠にcommunity / personalの情報が混ざらないことを、置き場所の段階で保つ
+- `raw`は**処理段階**の区別。ingest対象かどうかがR2を開いた時点で分かる
+- **各区分の下はフラットで、命名は自由。** editionをpathに出さない。中身は開けば分かる
+
 これはmetadataの導出元ではなく、単なる置き場所として扱う。
+
+## pathの区分とcatalogのmetadataは別物
+
+上記の3区分はpathに情報を出しているが、これは冒頭の「pathからmetadataを導出しない」に反しない。**粒度と読み手が違う**ため。
+
+| | 読み手 | 粒度 |
+|---|---|---|
+| pathの区分 | 人 (R2を開いて整理する) | `rule` / `strategy` / `raw` の3つ |
+| catalogの宣言 | 機械 (ingest / retrieval) | `content_type: rulebook \| faq \| errata`、`authority`、`language`、`edition` … |
+
+原則が禁じているのは**pathをmetadata schemaの代わりにすること**、つまり機械がpathをparseして属性を得る状態である。それをやるとtypoが構造上validなまま静かに通り、次元を足すたびに全pathのmoveが要る。
+
+したがって:
+
+- **機械が参照するのはcatalogの宣言(とfront matter)だけ。** pathをparseして`content_type`を決めない
+- pathの区分を増やしたくなっても、それはmetadataの次元追加ではない。3つで足りなくなった時点で考える
 
 ## metadataの持ち場所は「形式」で決める
 
@@ -247,12 +267,18 @@ version: 1
 game_id: nusfjord
 
 documents:
-  - key: games/nusfjord/rulebook-ja.pdf
+  - key: games/nusfjord/rule/rulebook-ja.pdf
     content_type: rulebook
     authority: official
     language: ja
     edition: bigbox
+  - key: games/nusfjord/rule/faq-2021.pdf
+    content_type: faq
+    authority: official
+    language: en
 ```
+
+`key`の`rule/`は人が整理するための区分で、`content_type`(`rulebook` / `faq`)は機械が使う分類。**同じ`rule/`の下から粒度の違う`content_type`が出る**ので、pathをparseして`content_type`を決めてはいけない。
 
 `game_id`はファイル名から導出せず**中に明記する**(pathから導出しないという原則を、catalog側でも守る)。ファイル名と`game_id`の一致はschemaでvalidationする。
 
