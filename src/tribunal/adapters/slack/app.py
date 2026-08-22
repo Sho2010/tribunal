@@ -14,6 +14,7 @@ from tribunal.infra.openai.rule_retriever import OpenAIRuleRetriever
 
 logger = logging.getLogger(__name__)
 
+ACCEPTED_REPLY = "🎲 調べています…"
 ERROR_REPLY = "回答の生成に失敗しました。"
 
 _MENTION_RE = re.compile(r"^\s*<@[^>]+>\s*")
@@ -37,6 +38,7 @@ def _build_bolt_app(answer_service: AnswerService, *, verify_token: bool = True)
         question = _strip_mention(event.get("text", ""))
         thread_ts = event.get("thread_ts") or event.get("ts")
         logger.info("app_mention received: %r", question)
+        say(text=ACCEPTED_REPLY, thread_ts=thread_ts)
         try:
             answer = answer_service.ask(question)
         except Exception:
