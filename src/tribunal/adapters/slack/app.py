@@ -38,14 +38,14 @@ def _build_bolt_app(answer_service: AnswerService, *, verify_token: bool = True)
         question = _strip_mention(event.get("text", ""))
         thread_ts = event.get("thread_ts") or event.get("ts")
         logger.info("app_mention received: %r", question)
-        say(text=ACCEPTED_REPLY, thread_ts=thread_ts)
         try:
+            say(text=ACCEPTED_REPLY, thread_ts=thread_ts)
             answer = answer_service.ask(question)
+            logger.info("answer generated: %d chars", len(answer.text))
+            say(text=_format(answer), thread_ts=thread_ts)
         except Exception:
-            logger.exception("failed to answer: %r", question)
+            logger.exception("failed to respond: %r", question)
             say(text=ERROR_REPLY, thread_ts=thread_ts)
-            return
-        say(text=_format(answer), thread_ts=thread_ts)
 
     # ack は 3 秒以内に返す必要がある。回答生成はそれより長いので lazy 側で走らせる。
     bolt_app.event("app_mention")(ack=lambda ack: ack(), lazy=[respond_to_mention])
