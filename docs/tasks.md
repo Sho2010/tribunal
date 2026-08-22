@@ -156,6 +156,7 @@ Sprite はまだ作成していないので、`note.md` の runbook 通り`sprit
 - edition情報
 
 ### B2. `games.yaml` JSON Schema
+**pending**
 - schema validation
 - duplicate/default edition等の追加validation
 
