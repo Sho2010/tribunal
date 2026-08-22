@@ -1,0 +1,80 @@
+version: 1
+
+games:
+  - id: nusfjord
+    name: Nusfjord
+    aliases:
+      - ヌースフィヨルド
+      - ヌスフィヨルド
+    identifying_terms:
+      - 晩餐会テーブル
+      - Banquet Table
+      - 給仕
+      - Serve Fish
+      - 長老
+      - Elder
+      - 株
+      - Share
+    editions:
+      - id: base
+        name: Nusfjord
+        default: true
+      - id: bigbox
+        name: Nusfjord Big Box
+        aliases:
+          - ビッグボックス
+          - Big Box
+
+  - id: agricola
+    name: Agricola
+    aliases:
+      - アグリコラ
+    identifying_terms:
+      - 進歩カード
+      - minor improvement
+      - major improvement
+      - 職業カード
+      - occupation
+      - 家族の成長
+      - Family Growth
+      - 収穫フェイズ
+      - Harvest
+    editions:
+      - id: revised
+        name: Agricola (Revised Edition)
+        default: true
+        aliases:
+          - リバイズド
+          - Revised
+      - id: classic
+        name: Agricola (2007)
+        aliases:
+          - 無印
+          - "2007"
+
+  - id: dominion
+    name: Dominion
+    aliases:
+      - ドミニオン
+    identifying_terms:
+      - サプライ
+      - Supply
+      - 屋敷
+      - Estate
+      - 圧縮
+      - trash
+      - ターミナル衝突
+      - terminal collision
+      - Kingdom card
+    editions:
+      - id: second
+        name: Dominion (Second Edition)
+        default: true
+        aliases:
+          - 第2版
+          - "2nd"
+      - id: first
+        name: Dominion (First Edition)
+        aliases:
+          - 第1版
+          - "1st"
