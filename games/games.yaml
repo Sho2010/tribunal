@@ -78,3 +78,23 @@ games:
         aliases:
           - 第1版
           - "1st"
+
+  # 架空。catalog の形を確認するための叩き台
+  - id: example
+    name: Example
+    aliases:
+      - エグザンプル
+    identifying_terms:
+      - 交易所
+      - Trading Post
+      - 灯台
+      - Lighthouse
+    editions:
+      - id: base
+        name: Example
+        default: true
+      - id: deluxe
+        name: Example Deluxe Edition
+        aliases:
+          - デラックス
+          - Deluxe

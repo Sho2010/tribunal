@@ -41,7 +41,7 @@ docs/tasks.md の <task-id> をやる。
 | A2 | §37（Authority / ContentType / metadata 方針）, §38 |
 | B1 / B2 | §16 |
 | C1 / C2 | §4, §6 |
-| C3 / C4 | §6（metadata の置き場所、YAML 1.1 の `language: no` 問題） |
+| C3 / C4 | §6（metadata の置き場所、`meta.yaml` の形） |
 | D1 / D2 | §5（reconcile が冪等）, §7 |
 | E1 | §11（file_search から始めてよいが Retrieval API を挟める構造に）, §38「port を切るのは retrieval だけ」 |
 | H1 | §20, §21（3 秒 ACK） |

@@ -29,7 +29,7 @@
 
 - A1 残り(lint / format / type check / test)、A2 ドメインモデル
 - B1 / B2 `games.yaml`
-- C1 R2 ディレクトリ設計、C3 / C4 `documents.yaml`
+- C1 R2 ディレクトリ設計、C3 / C4 `meta.yaml`
 - D1 Vector Store
 - E1 Responses API + File Search
 - H1 Slack mention → `AnswerService.ask()` 接続
@@ -41,7 +41,7 @@
 
 完了条件:
 
-- 1 ゲームの rulebook を R2 に置き `documents.yaml` に宣言 → 手動で Vector Store に載せる → Slack でルール質問に出典付きで答える
+- 1 ゲームの rulebook を R2 に置き `meta.yaml` に宣言 → 手動で Vector Store に載せる → Slack でルール質問に出典付きで答える
 - 宣言していない R2 object が ingest されない
 
 ## Phase 2. 厳密な裁定者になる (品質を測れるようにする)
@@ -203,9 +203,9 @@ Unknown
 games/<game_id>/{rule,strategy,raw}/
 ```
 
-各区分の意味・下位はフラット / 命名自由・pathの区分とcatalogのmetadataが別物である理由は arch §6 を見る。
+各区分の意味・下位はフラット / 命名自由・pathの区分と`meta.yaml`のmetadataが別物である理由は arch §6 を見る。
 
-**rulebook PDF / page image / 変換後の全文Markdownはrepoに置かない**(arch §4, 厳守)。
+bytes はローカルには置くが**push しない**。`.gitignore` が 3 区分ごと落とす(arch §4, 厳守)。
 
 ### C2. R2クライアント
 **pending (Phase 5)** — R2 を読むのは sync CLI(D2)だけで、その D2 が Phase 5 送りのため呼び出し側がいない。
@@ -218,29 +218,31 @@ Phase 1 の範囲(rulebook 数件)は手作業で配置する。
 
 R2をdocument bytesのSource of Truthとして扱う。
 
-### C3. document catalog (`catalog/documents/<game_id>.yaml`)
-repoに置くdesired state。**game 1つにつき1ファイル**。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
+### C3. document catalog (`games/<game_id>/meta.yaml`)
+desired state。**game 1つにつき1ファイル**で、そのgameのディレクトリ直下に置く。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
 
 ```yaml
-# catalog/documents/nusfjord.yaml
+# games/nusfjord/meta.yaml
 version: 1
 game_id: nusfjord
 
 documents:
-  - key: games/nusfjord/rule/rulebook-ja.pdf
+  - path: rule/rulebook-ja.pdf
     content_type: rulebook
     authority: official
     language: ja
     edition: bigbox
 ```
 
-`game_id`はファイル名から導出せず中に明記する。`openai_file_id`やhashのような観測結果は書かない(desiredとactualを混ぜない)。
+`path`は`meta.yaml`からの相対。R2 keyは`games/<game_id>/` + `path`で組み立てる。
+`game_id`はディレクトリ名から導出せず中に明記する。`openai_file_id`やhashのような観測結果は書かない(desiredとactualを混ぜない)。
 
 ### C4. document catalog の JSON Schema
 - schema validation
-- `language: no`がbooleanに落ちる等のYAML 1.1暗黙型変換を`type: string`で検出する
-- ファイル名と`game_id`の一致を検査する
-- 存在しないR2 keyの検出、key重複の検出
+- `language`は`enum: [ja, en]`。typo(`jp` / `eng`)も弾く
+- `edition`はoptional(FAQ / errataは版に紐づかない)
+- ディレクトリ名と`game_id`の一致を検査する
+- 宣言したファイルが実在しないケースの検出、`path`重複の検出
 
 ---
 
@@ -258,7 +260,7 @@ documents:
 **pending (Phase 5)** — 差分方式が効くのは、件数が増えて人が把握しきれなくなってから。
 Phase 1 の範囲(rulebook 数件 / 改訂は数年に一度)では手作業で足りる。crawl を始める Phase 5 で作る。
 
-`documents.yaml` + Markdown front matter(desired)とVector Store(actual)のdiffを取って適用する。冪等。
+`meta.yaml` + Markdown front matter(desired)とVector Store(actual)のdiffを取って適用する。冪等。
 
 ```text
 desiredにあってactualに無い     → Files upload + attach + attributes設定
@@ -284,8 +286,8 @@ R2 object create/delete → Event Notification → Cloudflare Queue → Worker
 D2のreconcileで拾えない残骸を掃除する。
 
 - orphan OpenAI File(どのVector Storeからも参照されていない)
-- R2にあるがdocuments.yamlにもfront matterにも宣言が無い(=ingestされない)object
-- documents.yamlが指すkeyがR2に存在しない
+- R2にあるがmeta.yamlにもfront matterにも宣言が無い(=ingestされない)object。**`raw/`は宣言しない前提なので除外する**
+- meta.yamlが指すpathがR2に存在しない
 
 `gc` / `doctor` コマンドとして実装。
 
@@ -493,7 +495,7 @@ hybrid
 ## K. Strategy Corpus
 
 ### K1. Strategy Document Schema
-Markdownはfile内にmetadataを持つ形式なので、front matterがmetadataの唯一の置き場所になる(arch §6)。`documents.yaml`には書かない。crawlerが生成するファイルも必ずfront matterを持つ。
+Markdownはfile内にmetadataを持つ形式なので、front matterがmetadataの唯一の置き場所になる(arch §6)。`meta.yaml`には書かない。crawlerが生成するファイルも必ずfront matterを持つ。
 
 基本:
 
