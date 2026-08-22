@@ -1,7 +1,7 @@
 """Rule Store を単独で叩く動作確認スクリプト。
 
 usage:
-    uv run --env-file .env python tribunal_ask.py '盗賊のルールは?' [game_id]
+    uv run --env-file .env python tribunal_ask.py 'ノースフィヨルドの勝者を教えて' [game_id]
 """
 
 import sys
