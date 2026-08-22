@@ -28,14 +28,29 @@ curl localhost:8080/                                             # health: {"sta
 - worktree は `claude --worktree <task-id>-<slug>` で作る。本体ツリーへの書き込みが機械的にブロックされる
 - **worktree 内では commit / push を確認なしで行ってよい。PR を立てるまで confirm 少なめで進める。** マージは PR 経由（ユーザーが review する）
 - **本体ツリー（main の作業ツリー）では commit しない。** worktree 内のファイルだけを触る（本体の読み取りは可）
-- PR 本文には「何を」だけでなく **なぜその設計にしたか** を書く
+- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は arch doc 側。型は `docs/workflow/pr-template.md`
+
+### コメント / docstring
+
+**PR 本文と同じ基準。コード内に「なぜこう設計したか」を書かない。** 設計の理由は arch doc にあり、
+コード側に写すと二重管理になって片方が腐る。
+
+- **docstring は 1 行。** 何をする関数かだけ。名前と型注釈で分かるなら書かない
+- 複数段落の docstring を書かない。**背景 / 検討経緯 / 「〜のため」はすべて削る**
+- コードを言い換えただけのコメントは書かない
+- ソースに残すのは、**コードを読んでも分からない外部制約**だけ。
+  外部 API の非自明な挙動（「`App()` は生成時に `auth.test` を叩く」）、仕様上の制約、ドメイン知識。
+  「なぜこう書いたか」ではなく「**そう書かないと何が起きるか**」の形にする
+
+それ以外の「ここはこう考えた」の類はソースに入れない。**PR の該当行コメントで伝える**
+（運用の詳細は未確定）。
 
 ## ドキュメント
 
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。**これが正**。
 2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
 3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
-4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`session-kickoff.md`（タスクセッションの立ち上げ方）、`tasks/<task-id>.md`（個別タスクの指示書）。
+4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）、`session-kickoff.md`（タスクセッションの立ち上げ方）、`tasks/<task-id>.md`（個別タスクの指示書）。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
 

@@ -27,7 +27,8 @@ docs/tasks.md の <task-id> をやる。
 - 設計の正は docs/Board Game AI - Architecture Context and Design Decisions.md
 - CLAUDE.md の「採らない案」を再提案しない
 
-完了したら PR を立てて、判断の根拠を本文に書く。
+完了したら PR を立てる。本文は docs/workflow/pr-template.md の型に従う
+（WHY は書かない。変更 / できるようになったこと / 注意点 / 前提の 4 つだけ）。
 ```
 
 ## 渡す前に確認すること

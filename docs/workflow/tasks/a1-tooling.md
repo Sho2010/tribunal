@@ -27,7 +27,11 @@ tasks.md A1 のうち、Python プロジェクト作成・ディレクトリ骨�
 
 ## 判断が要るところ
 
-以下は arch doc に書かれていないので、**自分で決めて PR 本文に理由を書く**（confirm 不要）。
+以下は arch doc に書かれていないので、**自分で決めて進む**（confirm 不要）。
+
+これは考慮点のリストであって、**PR 本文の節立てではない。** 1 項目 1 節で理由を書かないこと。
+PR に書くのは変更 / できるようになったこと / 注意点 / 前提の 4 つだけ（`docs/workflow/pr-template.md`）。
+下記は大半が自明な設定値なので、PR 本文には出てこないのが正常。
 
 - **mypy を strict にするか。** slack_bolt は型スタブを同梱しないので `ignore_missing_imports` の
   override が要る。全体を緩めるのではなく module 単位で許容する
@@ -41,8 +45,9 @@ tasks.md A1 のうち、Python プロジェクト作成・ディレクトリ骨�
   - `_strip_mention()` が `<@U123>` を落とす
   
   ただし **`adapters/slack/app.py` は import 時に `os.environ["SLACK_BOT_TOKEN"]` を読む**（CLAUDE.md
-  に明記）。テストで環境変数を用意するか、この設計自体を直すかは判断して PR に書く。**直す場合は
-  app_factory の遅延 import の意図（有効化していない platform の env を要求しない）を壊さないこと**
+  に明記）。テストで環境変数を用意するか、この設計自体を直すか。**直す場合は
+  app_factory の遅延 import の意図（有効化していない platform の env を要求しない）を壊さないこと**。
+  上のリストで唯一、**設計に触るので arch doc / CLAUDE.md の更新と PR への記載が要る**項目
 
 ## 完了条件
 
