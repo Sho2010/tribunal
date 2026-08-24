@@ -4,6 +4,13 @@ Slack からボードゲームのルール / 戦略を質問できる RAG chatbo
 
 設計は `docs/Board Game AI - Architecture Context and Design Decisions.md`、着手順は `docs/tasks.md` 先頭の Phase を参照。
 
+
+## Dependencies
+
+- [sprite](https://docs.sprites.dev/cli/installation/) - sprites.dev CLI
+- [rclone](https://github.com/rclone/rclone)
+- uv
+
 ### trivia
 
 - [The Six Hammers](https://wiki.project1999.com/The_Tribunal)
