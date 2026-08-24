@@ -30,6 +30,8 @@ games:
     aliases:
       - アグリコラ
     identifying_terms:
+      - 大進歩
+      - 小進歩
       - 進歩カード
       - minor improvement
       - major improvement
@@ -39,6 +41,8 @@ games:
       - Family Growth
       - 収穫フェイズ
       - Harvest
+      - 葦
+      - 家畜
     editions:
       - id: revised
         name: Agricola (Revised Edition)

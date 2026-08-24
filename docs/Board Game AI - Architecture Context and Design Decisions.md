@@ -110,11 +110,11 @@ Sprites
 
 # 4. R2をSource of Truthとする
 
-Knowledgeの原本(bytes)はCloudflare R2に保存する。
+Knowledgeの原本はCloudflare R2に保存する。
 
 重要な設計原則:
 
-> **R2がdocument bytesの唯一のauthoritative stateであり、OpenAI Vector Storeは再生成可能な検索indexである。**
+> **R2がdocument の唯一のauthoritative stateであり、OpenAI Vector Storeは再生成可能な検索indexである。**
 
 Vector Storeが壊れてもR2から再構築できることを前提にする。
 
@@ -125,7 +125,7 @@ metadataをR2のpathから導出する案は採らない(§6)。代わりに`gam
 したがってSoTは役割ごとに分かれる。
 
 ```text
-document bytes  → R2
+document → R2
 desired catalog → git repo (games/<game_id>/meta.yaml / Markdownのfront matter)
 actual state    → OpenAI Vector Store (file attributes)
 ```
@@ -147,7 +147,7 @@ push対象           : metadataのみ
 R2                 : bytes (uploadの宛先)
 ```
 
-したがって`games/<game_id>/`配下はbytesとmetadataが同居し、**`.gitignore`が境界を引く**。
+したがって`games/<game_id>/`配下はdocumnetとmetadataが同居し、**`.gitignore`が境界を引く**。
 
 ```gitignore
 games/*/rule/
@@ -155,7 +155,7 @@ games/*/strategy/
 games/*/raw/
 ```
 
-拡張子ではなく**置き場所で無視する**。PDFから生成したMarkdown(§13)やcrawl結果は拡張子で判別できないため、bytesが入るディレクトリごと落として`meta.yaml`だけを残す。
+拡張子ではなく**置き場所で無視する**。PDFから生成したMarkdown(§13)やcrawl結果は拡張子で判別できないため、documentが入るディレクトリごと落として`meta.yaml`だけを残す。
 
 この形にすると、ローカルのディレクトリがそのままR2の姿になるので、uploadは`games/<game_id>/`をそのまま同期するだけで済む。
 
