@@ -1,0 +1,19 @@
+# rclone の --filter-from。上の行が優先される。
+# scripts/r2.sh が games/ 以下の転送に使う。
+
+# crawl 生データ。ingest 対象外なので R2 へ上げない
+- raw/**
+- */raw/**
+
+# catalog は git が SoT。R2 へコピーを置かない
+- games.yaml
+- meta.yaml
+- */meta.yaml
+
+# Windows の Zone.Identifier / macOS の .DS_Store
+- *:Zone.Identifier
+- .DS_Store
+- ._*
+
+# 残りは全部転送する
++ **
