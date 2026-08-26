@@ -1440,3 +1440,77 @@ Sprite  : tribunal          (URL: tribunal-<org-id>.sprites.app)
 ```
 
 Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わり、SlackのRequest URL再設定とURL verificationのやり直しが必要になる**ため、まだ何も作っていない段階で揃えておくのが安い。
+
+---
+
+# 39. Intent判定の仕様
+
+§2 / §34のIntent Routerは`rule` / `strategy` / `hybrid`の3語しか決めていなかった。実装に入る段階で以下を確定した。
+
+## 判定は質問文だけを見る
+
+入力は**standalone question 1つ**とする。thread contextを判定材料にしない。
+
+§34の順序ではIntent Routerの手前でstandalone questionが生成されるので、threadの情報はその時点で質問文に畳み込まれている。判定器がthreadを再び見ると**同じ情報を2箇所で解釈する**ことになり、食い違ったときにどちらを正とするか決められない。
+
+またthreadを見る判定は状態が増え、LLMへの依存が強くなってデバッグが困難になる。決定的に判定できる形を保つほうが運用コストが低い。
+
+## hybridを作らない
+
+出力は`Rule` / `Strategy`の2値 + `Ambiguous`。
+
+§25のhybridは「Rule Storeでinteraction確認 → Strategy Storeで評価検索 → Strategy Analystが統合」で、**promptを選ぶ話ではなくretrievalを2本走らせて統合する話**。retrievalが2本必要になる段階まで意思決定を後回しにする。3値にすると`hybrid`を返せる型なのに実装が対応しない状態になる。
+
+## Ambiguousは既定側（Rule）で処理する
+
+GameResolverの`Unknown`に相当する状態は作らない（intentに「どちらでもない質問」は実質存在しない）。
+
+`Ambiguous`をRuleに倒すのは、**外したときの被害が非対称**だから。
+
+```text
+strategy質問をruleで答える → 「資料に記載がありません」と返る（無害）
+rule質問をstrategyで答える → 非公式資料でルールを語る（§8のtrust boundary違反）
+```
+
+迷ったらRuleが安全側。ユーザーへ聞き返す形は取らない（Slackの体験として重い）。
+
+## 判定優先順位
+
+```text
+1. 明示タグ
+2. rule寄りkeyword
+3. strategy寄りkeyword
+4. LLMによる推定        (未実装。場所だけ空ける)
+5. 既定 → Rule
+```
+
+**rule keywordをstrategyより先に見る。** 「この効果は強い制約ですか」のようにstrategy語を含むが実体はrule裁定の質問を取りこぼさないため。両方に該当した場合は`Ambiguous`とし、曖昧だった事実を消さない。
+
+## 明示タグの形式
+
+行頭のみ。空白あり / なしの両方を受ける。
+
+```text
+戦略: / strategy: / [戦略] / [strategy]    → Strategy
+ルール: / rule:   / [ルール] / [rule]      → Rule
+```
+
+コロン形式を主、角括弧形式をaliasとする。**日常的に打つ形と確実に効かせたい形で求めるものが違う**ため両方受ける（コロンは打鍵が軽くIMEでも近い / 角括弧は誤検出がほぼない）。行頭限定にすれば曖昧さは形式の数に依存しないので、aliasを増やすコストは実質ゼロ。
+
+`/strategy`のようなslash command風の形は採らない。**Slackが行頭の`/`をslash commandとして横取りする**ため、行頭に打った場合に送信前に弾かれる。将来slash commandを実装するときに名前も衝突する。
+
+判定後、タグは質問文から除去してretrieverへ渡す（タグが検索クエリに混ざると検索結果が劣化する）。
+
+## タグなしのときは判定結果を回答に添える
+
+タグを付けずに投げた場合、どちらとして処理したかを回答に明示する。運用ルールを事前に説明しなくても使いながら覚えられ、**判定が壊れていることが使用中にすぐ分かる**。タグを明示した場合は付けない（ユーザーが既に知っている情報なので）。
+
+## keyword群はチューニング前提
+
+初期セットは当て推量であり、実際の質問文を見て調整する。**運用としては明示タグを主経路とし、keywordはタグを忘れた場合の推測**として位置づける。したがってkeywordの精度が甘くても実害は小さい。
+
+## Protocolを切る
+
+判定方式は`keyword` → 将来の`LLM`で**実装が2つになることが確定している**ため、§38の「portを切るのはretrievalだけ」の例外としてProtocolを置く。retrievalにportを切ったのと同じ理由（実装が2つになる確定）による。
+
+置き場所は`application/pipeline/`（§38のディレクトリ構成に従う）。`ports.py`には置かない。`ports.py`は「adapterから見た差し替え点」で、intent判定はapplication内部の部品なので層が違う。
