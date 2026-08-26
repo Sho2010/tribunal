@@ -10,7 +10,7 @@ from slack_bolt.adapter.fastapi import SlackRequestHandler
 from tribunal.application.answer_service import AnswerService
 from tribunal.application.rule.protocol import adjudicator_prompt
 from tribunal.domain.answer import Answer
-from tribunal.infra.openai.rule_retriever import OpenAIRuleRetriever
+from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def register(
 ) -> None:
     """FastAPI に POST /slack/events を mount する。"""
     # env を読むのはここから。import しただけで SLACK_* / OPENAI_* を要求しないため。
-    service = answer_service or AnswerService(OpenAIRuleRetriever.from_env(adjudicator_prompt()))
+    service = answer_service or AnswerService(FileSearchRetriever.for_rule(adjudicator_prompt()))
     handler = SlackRequestHandler(_build_bolt_app(service, verify_token=verify_token))
 
     @app.post("/slack/events")

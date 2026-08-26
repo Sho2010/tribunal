@@ -7,7 +7,7 @@ usage:
 import sys
 
 from tribunal.application.rule.protocol import adjudicator_prompt
-from tribunal.infra.openai.rule_retriever import OpenAIRuleRetriever
+from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
 
 
 def main() -> int:
@@ -18,7 +18,7 @@ def main() -> int:
     question = sys.argv[1]
     game_id = sys.argv[2] if len(sys.argv) > 2 else None
 
-    retriever = OpenAIRuleRetriever.from_env(adjudicator_prompt())
+    retriever = FileSearchRetriever.for_rule(adjudicator_prompt())
     print(f"question: {question!r}  game_id: {game_id!r}")
     print("=" * 60)
 
