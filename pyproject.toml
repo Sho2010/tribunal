@@ -37,7 +37,7 @@ select = [
     "I",      # isort
     "UP",     # pyupgrade
     "B",      # flake8-bugbear
-    "TID252", # flake8-tidy-imports: 相対 import 禁止（レイヤの依存方向を追いやすくする / arch §38）
+    "TID252", # flake8-tidy-imports: 相対 import 禁止（レイヤの依存方向を追いやすくする）
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]

@@ -80,6 +80,8 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 - ソースに残すのは、**コードを読んでも分からない外部制約**だけ。
   外部 API の非自明な挙動（「`App()` は生成時に `auth.test` を叩く」）、仕様上の制約、ドメイン知識。
   「なぜこう書いたか」ではなく「**そう書かないと何が起きるか**」の形にする
+- **doc へのポインタも書かない**（`arch doc「〜」参照`）。理由を書かないのだから参照も要らない。
+  下の「成果物に doc への参照を書かない」を見る
 
 それ以外の「ここはこう考えた」の類はソースに入れない。**PR の該当行コメントで伝える**
 （運用の詳細は未確定）。
@@ -92,7 +94,47 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）。
 5. **`docs/context.md`** — Rule 回答の元プロンプト（実験で効果が確認できたもの）。Rule Adjudicator Protocol を実装するときはこの原文を正とする。
 
-初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc §37 に移設済み）。
+初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc の「付録: 初期案から引き継いだ細目」に移設済み）。
+
+### 成果物に doc への参照を書かない（厳守）
+
+**成果物は自己完結させる。** 対象は**あらゆる成果物**——コード / コメント / docstring / 設定ファイル /
+commit message / PR title / PR 本文 / `docs/tasks.md` / 新しく書く doc / ユーザーへの説明文。
+
+#### 節番号は書かない
+
+**`§4` / `arch §38` のような節番号での参照をどこにも書かない。** 節は追加・削除・並べ替えで番号が
+ずれるが、参照側は一緒に動かないので黙って別の節を指すようになる。番号は読み手にとっても中身の
+手がかりにならない。
+
+#### arch doc への参照そのものを既定で書かない
+
+節名に書き換えれば OK という話ではない。**arch doc へのポインタを成果物に残さない。**
+`arch doc「〜」を見る` と書いた時点で、読み手は別ファイルを開かないと意味が取れず、
+doc 側が変わると参照が腐る。
+
+書きたくなったら、次のどちらかにする。
+
+1. **参照ごと消す** — 既定はこれ。理由が要らない場所（コード / 設定ファイルのコメント）は特にそう。
+   「なぜこう設計したか」をコードに書かない方針と同じ
+2. **その場で完結する 1 行に書き下す** — 読み手に必要な事実だけを、doc を開かずに済む形で書く
+
+- ✅ `# key は games/ を含める。ローカルのツリーと R2 の姿を一致させる`
+- ✅ `bytes はローカルには置くが push しない。.gitignore が 3 区分ごと落とす（厳守）`
+- ❌ `# key は games/ を含める（arch doc「R2をSource of Truthとする」）`
+- ❌ `詳細は arch doc「ファイル構造とmetadataの持ち場所」を見る`
+- ❌ `arch §6 参照`
+
+例外は **arch doc 自身の中での自己参照**だけ（同一ファイル内なので開き直す必要がない）。
+この場合も番号ではなく節名で書く: `（「Rule corpusとStrategy corpus」）`。
+
+なお arch doc の見出しに付いている番号（`# 4. R2をSource of Truthとする`）は目次として残してよい。
+消すのは**他所から番号で指す**ことのほう。
+
+#### 会話でも同じ
+
+ユーザーへの説明で `§6` や `arch doc の「〜」節にある通り` と言わない。**内容を直接言う**
+（タスク識別子で会話しないのと同じ理由——ユーザーは節番号も節名も覚えていない）。
 
 ### 設計 doc は書き換える前提（重要）
 
@@ -103,9 +145,9 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 追う段階で前提が変わるのは正常で、そのとき doc が古くなるのは織り込み済み。
 
 - **doc に書いてあることを理由に「できません」と言わない。** 良い案なら提案する。
-  「arch §N にこう書いてあるので」は、**議論を止める根拠にはならない**
+  「arch doc にこう書いてあるので」は、**議論を止める根拠にはならない**
 - 実装と doc がズレたら、**doc を直すのが既定**。ズレたまま放置しない
-- ただし**黙って変えない**。「実情に合わないので arch §N をこう変えたい」と言ってから変える
+- ただし**黙って変えない**。「実情に合わないので arch doc のこの節をこう変えたい」と言ってから変える
 - 変えたら理由も doc に残す。次に読む人（Claude 含む）が同じ議論を蒸し返さないため
 
 下の「採らない案」も同じ。**却下の理由が今も成立するか**を見て、崩れているなら再提案してよい。
@@ -116,16 +158,16 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 検討して却下された判断。理由付きで潰れているので、**再提案する前に arch doc の該当節を読み、
 却下の理由が今も成立するか確認する**。成立しているなら蒸し返さない。崩れているなら提案してよい。
 
-- **SQLite を knowledge catalog にしない。** 同じ情報を複数箇所で mutable に持つ不整合を避けるため（arch §4）。会話履歴 DB も持たない（Slack thread から取得、arch §17）。
-- **R2 の path から metadata を導出しない。** path を metadata schema にすると typo が silently 通り、次元を足すと全 path の move + 再 ingest になる。しかも player_count / edition / 多言語は階層に収まらないので機構が 2 つに増える（arch §6）。path は locator。ただし **`rule` / `strategy` / `raw` の 3 区分は人が整理するために置く**（機械が参照するのは `meta.yaml` の宣言だけ）。
-- **単一 Vector Store + attributes で済ませない。** Rule / Strategy Store を分離する（arch §8）。理由は検索性能ではなく trust boundary。
-- **event driven ingest（R2 Event → Cloudflare Queue → Worker）を v1 で作らない。** catalog が git 上にあるので、この経路が担当できるのは「R2 へ直接置いた場合の自動取り込み」だけで、人の手間は sync CLI と変わらない（arch §5, tasks D3 は保留）。
-- **File Search の結果からそのまま回答させない。** query decomposition → multi-query retrieval → Rule Adjudicator（arch §9, §10, §34）。
+- **SQLite を knowledge catalog にしない。** 同じ情報を複数箇所で mutable に持つ不整合を避けるため。会話履歴 DB も持たない（Slack thread から取得）。
+- **R2 の path から metadata を導出しない。** path を metadata schema にすると typo が silently 通り、次元を足すと全 path の move + 再 ingest になる。しかも player_count / edition / 多言語は階層に収まらないので機構が 2 つに増える。path は locator。ただし **`rule` / `strategy` / `raw` の 3 区分は人が整理するために置く**（機械が参照するのは `meta.yaml` の宣言だけ）。
+- **単一 Vector Store + attributes で済ませない。** Rule / Strategy Store を分離する。理由は検索性能ではなく trust boundary。
+- **event driven ingest（R2 Event → Cloudflare Queue → Worker）を v1 で作らない。** catalog が git 上にあるので、この経路が担当できるのは「R2 へ直接置いた場合の自動取り込み」だけで、人の手間は sync CLI と変わらない（tasks D3 は保留）。
+- **File Search の結果からそのまま回答させない。** query decomposition → multi-query retrieval → Rule Adjudicator。
 - **retrieval を「Vector Store なし・直接 file input」で始めない。** 一度検討したが破棄（file_id を SQLite で管理する前提だったため）。Vector Store + File Search で進める（tasks D1/E1/M1）。
 
 ## アーキテクチャ
 
-レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。全体のディレクトリ構成は arch §38（現状は下記の一部だけが存在する）。
+レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。全体のディレクトリ構成は下記（現状はこの一部だけが存在する）。
 
 ```text
 games/                # games.yaml, schema/, <game_id>/{meta.yaml, rule/, strategy/, raw/}
@@ -152,15 +194,15 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
-- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**（arch §23）。呼び分け（Intent Router）は未実装で、現在 mount されるのは Rule 側だけ。
-- `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。store 非依存で、`for_rule()` / `for_strategy()` が読む env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）と注入する prompt だけが違う。**片方が未設定のとき他方へ fallback しない**（arch §8 の trust boundary）。
+- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。呼び分け（Intent Router）は未実装で、現在 mount されるのは Rule 側だけ。
+- `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。store 非依存で、`for_rule()` / `for_strategy()` が読む env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）と注入する prompt だけが違う。**片方が未設定のとき他方へ fallback しない**（trust boundary のため）。
 - `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。
 - `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
 - `src/tribunal/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/tribunal/main.py` は slack entrypoint を re-export する後方互換シム。
 
 Discord は FastAPI に mount できない Gateway（常時 websocket）方式に寄せる方針なので、`app_factory` ではなく独立 entrypoint / 別 service として扱う（対応自体を見送る可能性あり）。
 
-### 目標とする query pipeline（docs §34 / tasks J1）
+### 目標とする query pipeline（tasks J1）
 
 この順序を崩さない。
 
@@ -172,12 +214,12 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 
 ### 設計上ぶれさせない前提
 
-- **他人の著作物を push しない（厳守）。** 守るのは「GitHub に上げないこと」であって、**ローカルの作業ツリーに実体があるのは正常**（R2 へ upload する元が要る）。`games/<game_id>/` に metadata と bytes が同居し、`.gitignore` が `rule/` `strategy/` `raw/` を落とす。拡張子ではなく置き場所で無視するのは、変換後 Markdown や crawl 結果が拡張子で判別できないため（arch §4）。
-- **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`games/<game_id>/meta.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `meta.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index（arch §4）。
-- **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は `meta.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため（arch §6）。
-- **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（arch §5, tasks D2）。
+- **他人の著作物を push しない（厳守）。** 守るのは「GitHub に上げないこと」であって、**ローカルの作業ツリーに実体があるのは正常**（R2 へ upload する元が要る）。`games/<game_id>/` に metadata と bytes が同居し、`.gitignore` が `rule/` `strategy/` `raw/` を落とす。拡張子ではなく置き場所で無視するのは、変換後 Markdown や crawl 結果が拡張子で判別できないため。
+- **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`games/<game_id>/meta.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `meta.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index。
+- **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は `meta.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため。
+- **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（tasks D2）。
 - **Rule と Strategy を混ぜない。** Rule 回答に community / personal の情報をルール根拠として混ぜない。Rule を Strategy corpus から推測しない。
-- **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol**（docs §9）を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は「結論 → 根拠 → 解釈 → 引用」、原則日本語。
+- **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol** を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は「結論 → 根拠 → 解釈 → 引用」、原則日本語。
 - Strategy は唯一解がないので、Rule Adjudicator を拡張せず別の **Strategy Analyst Protocol**（前提 / 評価軸 / 複数候補 / trade-off を明示）を使う。
 - Slack thread を conversation 単位（`thread_ts` = conversation_id）とし、thread 履歴から standalone question を生成して毎回再検索する。**過去の bot 回答は context には使うがルール根拠にはしない**（誤答の連鎖を防ぐ）。
 - retrieval / reasoning の切り分けが debug できる構造にする（Responses API の `file_search` 任せにせず、Retrieval API を明示的に挟める形）。モデルを上げる前に Retrieval / Protocol / Context を改善し、同一 eval で比較する。

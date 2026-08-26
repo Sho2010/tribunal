@@ -120,7 +120,7 @@ Vector Storeが壊れてもR2から再構築できることを前提にする。
 
 ## catalog(desired state)はgitに置く
 
-metadataをR2のpathから導出する案は採らない(§6)。代わりに`games/<game_id>/meta.yaml`にmetadataを宣言する。
+metadataをR2のpathから導出する案は採らない(「ファイル構造とmetadataの持ち場所」)。代わりに`games/<game_id>/meta.yaml`にmetadataを宣言する。
 
 したがってSoTは役割ごとに分かれる。
 
@@ -155,7 +155,7 @@ games/*/strategy/
 games/*/raw/
 ```
 
-拡張子ではなく**置き場所で無視する**。PDFから生成したMarkdown(§13)やcrawl結果は拡張子で判別できないため、documentが入るディレクトリごと落として`meta.yaml`だけを残す。
+拡張子ではなく**置き場所で無視する**。PDFから生成したMarkdown(「Page-aware Markdown」)やcrawl結果は拡張子で判別できないため、documentが入るディレクトリごと落として`meta.yaml`だけを残す。
 
 この形にすると、ローカルのディレクトリがそのままR2の姿になるので、uploadは`games/<game_id>/`をそのまま同期するだけで済む。
 
@@ -204,11 +204,11 @@ R2へのドラッグ&ドロップ運用が実際に不便になった段階で�
 
 # 6. ファイル構造とmetadataの持ち場所
 
-`games/<game_id>/`をローカル作業ツリーとR2で共通の単位とする。ローカルにはbytesとmetadataが同居し、pushされるのは`meta.yaml`だけ(§4)。
+`games/<game_id>/`をローカル作業ツリーとR2で共通の単位とする。ローカルにはbytesとmetadataが同居し、pushされるのは`meta.yaml`だけ(「R2をSource of Truthとする」)。
 
 ```text
 games/
-  games.yaml              # game識別 (aliases, identifying terms, editions)。§16
+  games.yaml              # game識別 (aliases, identifying terms, editions)
   <game_id>/
     meta.yaml             # document宣言。これだけpushされる
     rule/                 ┐
@@ -240,7 +240,7 @@ games/
   raw/         # crawl生データ。ingest対象外。前処理のやり直し用
 ```
 
-- `rule` / `strategy`の境界は**trust boundary**。単なるジャンル分けではなく、Rule StoreとStrategy Storeを分離しているのと同じ線(§8)。ルール裁定の根拠にcommunity / personalの情報が混ざらないことを、置き場所の段階で保つ
+- `rule` / `strategy`の境界は**trust boundary**。単なるジャンル分けではなく、Rule StoreとStrategy Storeを分離しているのと同じ線(「Rule corpusとStrategy corpus」)。ルール裁定の根拠にcommunity / personalの情報が混ざらないことを、置き場所の段階で保つ
 - `raw`は**処理段階**の区別。ingest対象かどうかがディレクトリを開いた時点で分かる
 - **各区分の下はフラットで、命名は自由。** editionをpathに出さない。中身は開けば分かる
 
@@ -271,15 +271,15 @@ games/
 | PDF / 画像 (metadataを持てない) | `games/<game_id>/meta.yaml`に宣言 |
 | Markdown (metadataを持てる) | file内のYAML front matter |
 
-content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的に`meta.yaml`側に落ち、§13でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
+content_typeを軸に分けない理由は、公式FAQやerrataがPDFで配布されることが普通にあるため。形式基準にしておけば、PDFのFAQは自動的に`meta.yaml`側に落ち、「Page-aware Markdown」でrulebookをMarkdownへ正規化した時もfront matterへ移るのが自然に決まる。
 
-crawlerが生成するファイルは必ずfile内にmetadata sectionを持つ(§26)。
+crawlerが生成するファイルは必ずfile内にmetadata sectionを持つ(「Strategy Corpus」)。
 
 ## document catalog (games/<game_id>/meta.yaml)
 
 **game 1つにつき1ファイル**とし、そのgameのディレクトリ直下に置く。1ファイルに全gameを並べると、game追加やcrawlerによる追記で編集が競合するため。
 
-宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(§4)。
+宣言するのは人が決める情報だけで、`openai_file_id`や同期済みhashのような観測結果は書かない(「R2をSource of Truthとする」)。
 
 ```yaml
 # games/nusfjord/meta.yaml
@@ -608,7 +608,7 @@ GameResolverの優先順位:
 
 GameResolver用のcatalog。
 
-Knowledge document一覧はここに持たせない(gameごとの`meta.yaml`が持つ、§6)。
+Knowledge document一覧はここに持たせない(gameごとの`meta.yaml`が持つ、「ファイル構造とmetadataの持ち場所」)。
 
 役割:
 
@@ -649,7 +649,7 @@ games:
 `games`はmappingではなくlistにし、`game_id`は`id`として中に明記する。
 
 - mapping keyだと重複`game_id`が`safe_load`の時点でsilentlyに後勝ちする。検出するにはloader差し替えが要る
-- `meta.yaml`(§6)と形が揃う。あちらも`game_id`をディレクトリ名から導出せず中に明記している
+- `meta.yaml`(「ファイル構造とmetadataの持ち場所」)と形が揃う。あちらも`game_id`をディレクトリ名から導出せず中に明記している
 
 `editions`はoptional。版を区別しないゲームで空の宣言を強制しない。
 
@@ -1352,8 +1352,8 @@ Visionで再確認
 
 ```text
 .
-├── games/                      # §6: gameごとのmetadata + bytes。bytesは.gitignore
-│   ├── games.yaml              #   §16: game識別 (aliases, identifying terms)
+├── games/                      # gameごとのmetadata + bytes。bytesは.gitignore
+│   ├── games.yaml              #   game識別 (aliases, identifying terms)
 │   ├── schema/                 #   JSON Schema
 │   └── <game_id>/
 │       ├── meta.yaml           #   document宣言。これだけpushされる
@@ -1406,7 +1406,7 @@ E1(Responses APIの`file_search`) → E2(明示的Retrieval API)で**実装が2�
 
 ## knowledge / cliはbot runtimeから切り離す
 
-ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogにも触らない**(§5)。
+ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogにも触らない**(「Ingest経路」)。
 
 したがって`adapters/` `application/`から`knowledge/`への import が生えたら設計が壊れたサイン。逆(`cli/` → `knowledge/` → `infra/`)は正常。
 
@@ -1414,7 +1414,7 @@ ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogに�
 
 どちらも「人が宣言・レビューするデータ」でコードではないため、`src/`の中に入れない。schema validationをCIに載せるときの対象も明確になる。
 
-`games/`はmetadataとbytesが同居するが、**pushされるのは`meta.yaml`と`games.yaml`だけ**(§4)。ローカルのディレクトリがそのままR2の姿になるので、uploadが単純になる。
+`games/`はmetadataとbytesが同居するが、**pushされるのは`meta.yaml`と`games.yaml`だけ**(「R2をSource of Truthとする」)。ローカルのディレクトリがそのままR2の姿になるので、uploadが単純になる。
 
 ## protocol promptは.mdファイルとして使う側にcolocateする
 
@@ -1430,7 +1430,7 @@ diffがreviewで見え、eval結果と紐づけられる。
 
 ## 名前
 
-プロダクト名 / import package = **tribunal**(裁定所)。Rule Adjudicator(§9)を中心に据えた性格をそのまま名前にしている。
+プロダクト名 / import package = **tribunal**(裁定所)。Rule Adjudicator(「Rule Adjudicator Protocol」)を中心に据えた性格をそのまま名前にしている。
 
 ```text
 package : tribunal          (src/tribunal/)
@@ -1445,13 +1445,13 @@ Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わ
 
 # 39. Intent判定の仕様
 
-§2 / §34のIntent Routerは`rule` / `strategy` / `hybrid`の3語しか決めていなかった。実装に入る段階で以下を確定した。
+「全体アーキテクチャ」「基本的なQuery Pipeline」のIntent Routerは`rule` / `strategy` / `hybrid`の3語しか決めていなかった。実装に入る段階で以下を確定した。
 
 ## 判定は質問文だけを見る
 
 入力は**standalone question 1つ**とする。thread contextを判定材料にしない。
 
-§34の順序ではIntent Routerの手前でstandalone questionが生成されるので、threadの情報はその時点で質問文に畳み込まれている。判定器がthreadを再び見ると**同じ情報を2箇所で解釈する**ことになり、食い違ったときにどちらを正とするか決められない。
+「基本的なQuery Pipeline」の順序ではIntent Routerの手前でstandalone questionが生成されるので、threadの情報はその時点で質問文に畳み込まれている。判定器がthreadを再び見ると**同じ情報を2箇所で解釈する**ことになり、食い違ったときにどちらを正とするか決められない。
 
 またthreadを見る判定は状態が増え、LLMへの依存が強くなってデバッグが困難になる。決定的に判定できる形を保つほうが運用コストが低い。
 
@@ -1459,7 +1459,7 @@ Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わ
 
 出力は`Rule` / `Strategy`の2値 + `Ambiguous`。
 
-§25のhybridは「Rule Storeでinteraction確認 → Strategy Storeで評価検索 → Strategy Analystが統合」で、**promptを選ぶ話ではなくretrievalを2本走らせて統合する話**。retrievalが2本必要になる段階まで意思決定を後回しにする。3値にすると`hybrid`を返せる型なのに実装が対応しない状態になる。
+「Hybrid Query」のhybridは「Rule Storeでinteraction確認 → Strategy Storeで評価検索 → Strategy Analystが統合」で、**promptを選ぶ話ではなくretrievalを2本走らせて統合する話**。retrievalが2本必要になる段階まで意思決定を後回しにする。3値にすると`hybrid`を返せる型なのに実装が対応しない状態になる。
 
 ## Ambiguousは既定側（Rule）で処理する
 
@@ -1469,7 +1469,7 @@ GameResolverの`Unknown`に相当する状態は作らない（intentに「ど�
 
 ```text
 strategy質問をruleで答える → 「資料に記載がありません」と返る（無害）
-rule質問をstrategyで答える → 非公式資料でルールを語る（§8のtrust boundary違反）
+rule質問をstrategyで答える → 非公式資料でルールを語る（「Rule corpusとStrategy corpus」のtrust boundary違反）
 ```
 
 迷ったらRuleが安全側。ユーザーへ聞き返す形は取らない（Slackの体験として重い）。
@@ -1511,6 +1511,6 @@ rule質問をstrategyで答える → 非公式資料でルールを語る（§8
 
 ## Protocolを切る
 
-判定方式は`keyword` → 将来の`LLM`で**実装が2つになることが確定している**ため、§38の「portを切るのはretrievalだけ」の例外としてProtocolを置く。retrievalにportを切ったのと同じ理由（実装が2つになる確定）による。
+判定方式は`keyword` → 将来の`LLM`で**実装が2つになることが確定している**ため、「ディレクトリ構成」の「portを切るのはretrievalだけ」の例外としてProtocolを置く。retrievalにportを切ったのと同じ理由（実装が2つになる確定）による。
 
-置き場所は`application/pipeline/`（§38のディレクトリ構成に従う）。`ports.py`には置かない。`ports.py`は「adapterから見た差し替え点」で、intent判定はapplication内部の部品なので層が違う。
+置き場所は`application/pipeline/`（「ディレクトリ構成」に従う）。`ports.py`には置かない。`ports.py`は「adapterから見た差し替え点」で、intent判定はapplication内部の部品なので層が違う。

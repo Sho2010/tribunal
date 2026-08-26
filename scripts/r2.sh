@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-# key は games/ を含める。ローカルのツリーと R2 の姿を一致させる（arch §4, §6）
+# key は games/ を含める。ローカルのツリーと R2 の姿を一致させる
 if [[ -n "$GAME_ID" ]]; then
     LOCAL="$REPO_ROOT/games/$GAME_ID"
     REMOTE="$R2_REMOTE:$R2_BUCKET/games/$GAME_ID"

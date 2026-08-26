@@ -120,7 +120,7 @@ crawl で件数が増え、**人が把握しきれなくなる**のがこの Pha
 
 ### A1. Pythonプロジェクトの初期構成
 - Pythonプロジェクト作成
-- ディレクトリ構成(arch §38)の骨組みを作る
+- ディレクトリ構成の骨組みを作る
 - CLI / test 構成
 - lint / format / type check
 - 設定・secret管理方針
@@ -143,7 +143,7 @@ crawl で件数が増え、**人が把握しきれなくなる**のがこの Pha
   - play_log
 
 ### A3. パッケージ名の確定と rename ✅
-プロダクト名 = **tribunal**(arch §38)。package / repo / Sprite すべて`tribunal`に統一済み。
+プロダクト名 = **tribunal**。package / repo / Sprite すべて`tribunal`に統一済み。
 
 - `src/tribunal/`、`pyproject.toml`、全import、起動対象`tribunal.entrypoints.slack:app`
 - `README.md`、`CLAUDE.md`、`docs/sprites.md`、`note.md`のrunbook
@@ -197,15 +197,17 @@ Unknown
 ## C. R2 Storage
 
 ### C1. R2ディレクトリ設計
-**done** — arch §6 に記載。
+**done**
 
 ```text
 games/<game_id>/{rule,strategy,raw}/
 ```
 
-各区分の意味・下位はフラット / 命名自由・pathの区分と`meta.yaml`のmetadataが別物である理由は arch §6 を見る。
+3区分の下位はフラットで命名自由。pathはlocatorであって metadata schema ではないので、
+pathの区分と`meta.yaml`のmetadataは別物。機械が参照するのは`meta.yaml`の宣言だけで、
+3区分は人が整理するために置く。
 
-bytes はローカルには置くが**push しない**。`.gitignore` が 3 区分ごと落とす(arch §4, 厳守)。
+bytes はローカルには置くが**push しない**。`.gitignore` が 3 区分ごと落とす(厳守)。
 
 ### C2. R2クライアント
 **pending (Phase 5)** — R2 を読むのは sync CLI(D2)だけで、その D2 が Phase 5 送りのため呼び出し側がいない。
@@ -219,7 +221,7 @@ Phase 1 の範囲(rulebook 数件)は手作業で配置する。
 R2をdocument bytesのSource of Truthとして扱う。
 
 ### C3. document catalog (`games/<game_id>/meta.yaml`)
-desired state。**game 1つにつき1ファイル**で、そのgameのディレクトリ直下に置く。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない(arch §6)。
+desired state。**game 1つにつき1ファイル**で、そのgameのディレクトリ直下に置く。PDF / 画像のmetadataを宣言する。Markdownはfile内のYAML front matterに持つので書かない。
 
 ```yaml
 # games/nusfjord/meta.yaml
@@ -271,7 +273,7 @@ actualにあってdesiredに無い     → detach / delete
 ローカル実行、またはmerge時にCIで実行する。
 
 ### D3. R2 Event Driven Ingest(保留)
-v1では実装しない(arch §5)。catalogがgit上にあるため、この経路が担当できるのは「R2へ直接置いた場合の自動取り込み」だけで、人の手間はsync CLIと変わらない。
+v1では実装しない。catalogがgit上にあるため、この経路が担当できるのは「R2へ直接置いた場合の自動取り込み」だけで、人の手間はsync CLIと変わらない。
 
 必要になった段階で追加する:
 
@@ -495,7 +497,7 @@ hybrid
 ## K. Strategy Corpus
 
 ### K1. Strategy Document Schema
-Markdownはfile内にmetadataを持つ形式なので、front matterがmetadataの唯一の置き場所になる(arch §6)。`meta.yaml`には書かない。crawlerが生成するファイルも必ずfront matterを持つ。
+Markdownはfile内にmetadataを持つ形式なので、front matterがmetadataの唯一の置き場所になる。`meta.yaml`には書かない。crawlerが生成するファイルも必ずfront matterを持つ。
 
 基本:
 
