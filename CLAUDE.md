@@ -152,6 +152,8 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
+- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**（arch §23）。呼び分け（Intent Router）は未実装で、現在 mount されるのは Rule 側だけ。
+- `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。store 非依存で、`for_rule()` / `for_strategy()` が読む env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）と注入する prompt だけが違う。**片方が未設定のとき他方へ fallback しない**（arch §8 の trust boundary）。
 - `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。
 - `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
 - `src/tribunal/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/tribunal/main.py` は slack entrypoint を re-export する後方互換シム。

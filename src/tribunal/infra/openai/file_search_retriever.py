@@ -10,9 +10,12 @@ from tribunal.domain.answer import Answer, Source
 DEFAULT_MODEL = "gpt-5"
 MAX_NUM_RESULTS = 20
 
+RULE_STORE_ENV = "TRIBUNAL_RULE_VECTOR_STORE_ID"
+STRATEGY_STORE_ENV = "TRIBUNAL_STRATEGY_VECTOR_STORE_ID"
 
-class OpenAIRuleRetriever:
-    """Rule Store を File Search で引いて回答を生成する。"""
+
+class FileSearchRetriever:
+    """Vector Store を File Search で引いて回答を生成する。"""
 
     def __init__(
         self,
@@ -28,10 +31,25 @@ class OpenAIRuleRetriever:
         self._model = model
 
     @classmethod
-    def from_env(cls, instructions: str, *, client: OpenAI | None = None) -> "OpenAIRuleRetriever":
-        """TRIBUNAL_RULE_VECTOR_STORE_ID / TRIBUNAL_MODEL から組み立てる。"""
+    def for_rule(cls, instructions: str, *, client: OpenAI | None = None) -> "FileSearchRetriever":
+        """Rule Store の retriever を env から組み立てる。"""
+        return cls._from_env(RULE_STORE_ENV, instructions, client=client)
+
+    @classmethod
+    def for_strategy(
+        cls, instructions: str, *, client: OpenAI | None = None
+    ) -> "FileSearchRetriever":
+        """Strategy Store の retriever を env から組み立てる。"""
+        return cls._from_env(STRATEGY_STORE_ENV, instructions, client=client)
+
+    @classmethod
+    def _from_env(
+        cls, store_env: str, instructions: str, *, client: OpenAI | None = None
+    ) -> "FileSearchRetriever":
+        # Store ID 未設定は KeyError にする。別 Store へ fallback すると Rule 資料で
+        # strategy を答える（またはその逆）経路ができる。
         return cls(
-            os.environ["TRIBUNAL_RULE_VECTOR_STORE_ID"],
+            os.environ[store_env],
             instructions,
             client=client,
             model=os.environ.get("TRIBUNAL_MODEL", DEFAULT_MODEL),
