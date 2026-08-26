@@ -11,7 +11,7 @@ def test_analyst_prompt_is_readable() -> None:
 
 
 def test_analyst_prompt_declares_answer_shape() -> None:
-    """Strategy 回答は 前提 / 評価軸 / 複数候補 / trade-off を明示する（arch §24）。"""
+    """Strategy 回答は 前提 / 評価軸 / 複数候補 / trade-off を明示する。"""
     prompt = analyst_prompt()
 
     for section in ("前提", "評価軸", "候補", "trade-off"):

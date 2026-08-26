@@ -16,7 +16,7 @@ from tribunal.application.pipeline.intent import Intent, KeywordIntentClassifier
     ],
 )
 def test_strategy_tag_is_stripped_from_question(raw: str, expected: str) -> None:
-    """タグは検索クエリに混ぜない（arch §39）。"""
+    """タグは検索クエリに混ぜない。"""
     result = KeywordIntentClassifier().classify(raw)
 
     assert result.intent is Intent.STRATEGY
@@ -50,7 +50,7 @@ def test_strategy_keyword_routes_to_strategy() -> None:
 
 
 def test_rule_keyword_is_checked_before_strategy() -> None:
-    """strategy 語を含む rule 質問を取りこぼさない（arch §39）。"""
+    """strategy 語を含む rule 質問を取りこぼさない。"""
     result = KeywordIntentClassifier().classify("この効果は強制ですか")
 
     assert result.intent is Intent.RULE

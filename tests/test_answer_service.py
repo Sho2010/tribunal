@@ -64,7 +64,7 @@ def test_strategy_tag_routes_to_strategy_retriever() -> None:
 
 
 def test_untagged_question_gets_a_note_about_the_routing() -> None:
-    """タグなしのときは、どちらとして処理したかを添える（arch §39）。"""
+    """タグなしのときは、どちらとして処理したかを添える。"""
     answer = AnswerService(RecordingRetriever("rule")).ask("盗賊はどう動かす?")
 
     assert answer.text.startswith("rule")
@@ -78,7 +78,7 @@ def test_tagged_question_gets_no_note() -> None:
 
 
 def test_ambiguous_falls_back_to_rule() -> None:
-    """rule 質問を strategy で答えると非公式資料でルールを語ることになる（arch §39）。"""
+    """rule 質問を strategy で答えると非公式資料でルールを語ることになる。"""
     rule, strategy = RecordingRetriever("rule"), RecordingRetriever("strategy")
 
     answer = AnswerService(rule, strategy_retriever=strategy).ask("このドラフトのルールは?")
@@ -88,7 +88,7 @@ def test_ambiguous_falls_back_to_rule() -> None:
 
 
 def test_strategy_without_store_raises_instead_of_answering_from_rule() -> None:
-    """Store 未整備時に rule 資料で戦略を語らない（arch §8 の trust boundary）。"""
+    """Store 未整備時に rule 資料で戦略を語らない。"""
     rule = RecordingRetriever("rule")
 
     with pytest.raises(StrategyUnavailable):

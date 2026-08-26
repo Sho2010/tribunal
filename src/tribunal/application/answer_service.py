@@ -37,7 +37,7 @@ class AnswerService:
         if classified.intent is Intent.STRATEGY:
             return self._ask_strategy(classified, game_id=game_id)
         # AMBIGUOUS は Rule に倒す。rule 質問を strategy で答えると非公式資料で
-        # ルールを語ることになる（arch §39）。
+        # ルールを語ることになる。
         return self._ask_rule(classified, game_id=game_id)
 
     def _ask_rule(self, classified: Classified, *, game_id: str | None) -> Answer:
