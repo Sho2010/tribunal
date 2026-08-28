@@ -234,3 +234,6 @@ games/*/raw/
 
 # claude --worktree の worktree 置き場（docs/workflow/branching.md）
 .claude/worktrees/
+
+# 振り返りの記録。実装方針ではないので push しない
+docs/retro/

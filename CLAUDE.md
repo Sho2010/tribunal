@@ -46,12 +46,12 @@ uv run pytest                # test
 
 **`docs/tasks.md` は着手順の参考であって、そのままの粒度で実装する契約ではない。**
 
-**`docs/tasks.md` の小見出し 1 つ（`A1`, `C3`, `D2`）= 1 ブランチ = 1 worktree = 1 セッション。** 詳細は `docs/workflow/branching.md`。
+**`docs/tasks.md` の小見出し 1 つ（`A1`, `C3`, `D2`）= 1 ブランチ = 1 worktree = 1 セッション。**
 
 - worktree は `claude --worktree <task-id>-<slug>` で作る。本体ツリーへの書き込みが機械的にブロックされる
 - **worktree 内では commit / push を確認なしで行ってよい。PR を立てるまで confirm 少なめで進める。** マージは PR 経由（ユーザーが review する）
 - **本体ツリー（main の作業ツリー）では commit しない。** worktree 内のファイルだけを触る（本体の読み取りは可）
-- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は arch doc 側。**タスク識別子（`A1` / `B1` …）は本文に書かない**（branch 名と title にある）。型は `docs/workflow/pr-template.md`
+- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は arch doc 側。**タスク識別子（`A1` / `B1` …）は本文に書かない**（branch 名と title にある）。型は repo 直下の `pr-template.md`
 
 ### タスク識別子で会話しない（厳守）
 
@@ -90,8 +90,8 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 
 1. **`docs/Board Game AI - Architecture Context and Design Decisions.md`** — 設計判断とその理由。現時点の合意はこれを見る（下の「設計 doc は書き換える前提」も読む）。
 2. **`docs/tasks.md`** — 先頭の **Phase（機能マイルストーン）が着手順で、各 Phase に完了条件がある**。その下の A〜O がタスク分解。**小見出し 1 つ（`A1`, `C3`, `D2` など）を 1 タスクの単位**として扱う。次に何をやるかはここを見る。
-3. **`docs/sprites.md`** — Fly.io Sprites 運用リファレンス。`note.md` は初回デプロイ runbook。
-4. **`docs/workflow/`** — 開発の進め方。`branching.md`（worktree / ブランチ / PR 規約）、`pr-template.md`（PR 本文の型）。
+3. **`note.md`** — 初回デプロイ runbook（Sprites）。
+4. **`pr-template.md`**（repo 直下）— PR 本文の型。
 5. **`docs/context.md`** — Rule 回答の元プロンプト（実験で効果が確認できたもの）。Rule Adjudicator Protocol を実装するときはこの原文を正とする。
 
 初期の実装指示書 `plan.md` (`docs/first-plan.md`) は、現行方針と矛盾する記述で誤判断を招くため削除した（git 履歴に残る。まだ有効だった細目は arch doc の「付録: 初期案から引き継いだ細目」に移設済み）。
@@ -171,7 +171,7 @@ doc 側が変わると参照が腐る。
 
 ```text
 games/                # games.yaml, schema/, <game_id>/{meta.yaml, rule/, strategy/, raw/}
-evals/                # eval dataset
+evals/                # promptfooconfig.yaml, cases/, provider.py
 src/tribunal/
   entrypoints/        # uvicorn 起動対象
   adapters/           # inbound: chat platform
@@ -179,7 +179,7 @@ src/tribunal/
   domain/
   infra/              # outbound: openai/, r2/
   knowledge/          # meta.yaml 読み込み / front matter / reconcile
-  eval/  cli/
+  cli/
 ```
 
 命名で守ること:
@@ -189,6 +189,8 @@ src/tribunal/
 - **port を切るのは retrieval だけ**（E1 の `file_search` → E2 の Retrieval API で実装が 2 つになるため）。他は必要になるまで Protocol を作らない。
 - **protocol prompt は `.md` ファイル**として使う側にコロケートし（`application/rule/prompts/adjudicator.md`）、コード内の文字列リテラルにしない。eval で前後比較する対象なので diff が見えることが要件。
 - **`games/` と `evals/` は `src/` の外**。人が宣言・レビューするデータでコードではない。
+- **eval runner を自作しない。** promptfoo を使い、`evals/promptfooconfig.yaml` と Python provider
+  （`AnswerService` を叩くだけの薄いもの）を置く。promptfoo は npm パッケージなので bot の実行環境には入らない。
 
 現在あるモジュール:
 
@@ -208,7 +210,7 @@ Discord は FastAPI に mount できない Gateway（常時 websocket）方式�
 
 ```text
 Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
-  → Standalone Question → Intent Router(rule/strategy/hybrid) → Query Decomposition
+  → Standalone Question → Intent Router(rule/strategy/ambiguous) → Query Decomposition
   → Retrieval → Rule Adjudicator / Strategy Analyst → Citation → Answer → Chat Adapter
 ```
 
@@ -219,14 +221,14 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 - **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は `meta.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため。
 - **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（tasks D2）。
 - **Rule と Strategy を混ぜない。** Rule 回答に community / personal の情報をルール根拠として混ぜない。Rule を Strategy corpus から推測しない。
-- **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol** を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は「結論 → 根拠 → 解釈 → 引用」、原則日本語。
+- **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol** を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は【ルール引用】→【分析・検討】→【結論】の順で、**結論を先に書かせない**。原則日本語。
 - Strategy は唯一解がないので、Rule Adjudicator を拡張せず別の **Strategy Analyst Protocol**（前提 / 評価軸 / 複数候補 / trade-off を明示）を使う。
 - Slack thread を conversation 単位（`thread_ts` = conversation_id）とし、thread 履歴から standalone question を生成して毎回再検索する。**過去の bot 回答は context には使うがルール根拠にはしない**（誤答の連鎖を防ぐ）。
 - retrieval / reasoning の切り分けが debug できる構造にする（Responses API の `file_search` 任せにせず、Retrieval API を明示的に挟める形）。モデルを上げる前に Retrieval / Protocol / Context を改善し、同一 eval で比較する。
 
 ## Sprites でのデプロイ
 
-詳細は `docs/sprites.md`、手順は `note.md`。落とし穴だけ:
+手順は `note.md`。落とし穴だけ:
 
 - **ディスクは自動永続、RAM / プロセスは pause で消える。** 常駐プロセスは `exec` の foreground 起動ではなく **service 化**する（cold wake 時に自動再起動される）。checkpoint はディスク永続のためには不要。
 - HTTP port を持てる service は **1 つだけ**（8080 を bot が確保）。

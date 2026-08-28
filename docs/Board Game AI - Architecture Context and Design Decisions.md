@@ -56,7 +56,6 @@ Query Orchestrator
       ├── Intent Router
       │      ├── rule
       │      ├── strategy
-      │      └── hybrid
       │
       ├── Retrieval
       │      ├── Rule corpus
@@ -385,38 +384,8 @@ Rule回答時にcommunity opinionを公式ルールとして混ぜないこと�
 
 そのためRule回答では必須プロトコルとして扱う。
 
-最低限確認するもの:
-
-```text
-- 対象アクションの基本ルール
-- 用語定義
-- セットアップ規則
-- player countによる変更
-- 例外規則
-- examples
-- 関連する別section
-```
-
-禁止事項:
-
-```text
-- 最初に見つかった記述だけで即答しない
-- setup状態をゲーム中の制約に一般化しない
-- exampleを一般ルールとして扱わない
-- 推測を公式ルールとして断定しない
-```
-
-Rule answerの典型構成:
-
-```text
-結論
-
-根拠となるルール
-
-解釈
-
-参照資料 / 原文
-```
+protocolの本文は`src/tribunal/application/rule/prompts/adjudicator.md`。回答の順序は「根拠→分析→結論」で、
+結論を先に書かせない。
 
 ---
 
@@ -511,71 +480,11 @@ Vector Store
 
 ---
 
-# 13. Page-aware Markdown
-
-必要になればPDFをpage-aware Markdownへ正規化する。
-
-目的:
-
-- page citation
-- section単位でcontextを広げる
-- 前後のruleをまとめて取得する
-
-例:
-
-```markdown
-# Page 10
-
-## Serve Fish
-
-...
-```
-
-検索粒度とモデルに渡すcontext粒度は分ける。
-
-理想:
-
-```text
-細かいchunkで検索
- ↓
-hitしたsection全体をcontextとして渡す
-```
+---
 
 ---
 
-# 14. Vision
-
-ボードゲームRulebookには:
-
-- アイコン
-- 図
-- setup diagram
-- token配置
-- フローチャート
-
-があるため、テキストだけでは足りない可能性がある。
-
-将来的には:
-
-```text
-PDF
- ├── text
- └── page image
-       ↓
-     Vision
-       ↓
-structured Markdown
-       ↓
-Vector Store
-```
-
-を検討する。
-
-ただしv1では後回し。
-
----
-
-# 15. GameResolver
+# 13. GameResolver
 
 ユーザーが毎回ゲーム名を書くとは期待しない。
 
@@ -604,7 +513,7 @@ GameResolverの優先順位:
 
 ---
 
-# 16. games/games.yaml
+# 14. games/games.yaml
 
 GameResolver用のcatalog。
 
@@ -659,7 +568,7 @@ JSON Schemaも用意しvalidationする(tasks B2)。
 
 ---
 
-# 17. Slack Conversation Model
+# 15. Slack Conversation Model
 
 Slack threadをconversation単位として利用する。
 
@@ -686,7 +595,7 @@ thread履歴はSlackから取得する。
 
 ---
 
-# 18. 過去のBot回答の扱い
+# 16. 過去のBot回答の扱い
 
 重要な原則:
 
@@ -710,7 +619,7 @@ standalone question生成
 
 ---
 
-# 19. Standalone Question
+# 17. Standalone Question
 
 follow-up:
 
@@ -733,7 +642,7 @@ thread contextから:
 
 ---
 
-# 20. Slack / Discord Adapter
+# 18. Slack / Discord Adapter
 
 platform固有実装はApplication層から分離する。
 
@@ -756,13 +665,14 @@ RAGやOpenAIの実装詳細は知らない。
 
 ---
 
-# 21. Slack
+# 19. Slack
 
 対応:
 
-- slash command
 - mention
 - thread conversation
+
+slash commandは使わない。Slackが先頭`/`を横取りするため、`/game`のような自前の書式は成立しない。
 
 3秒以内ACKが必要なため、重い処理とは分離する。
 
@@ -780,7 +690,7 @@ thread内follow-upをどう検出するかは実装時に調整する。
 
 ---
 
-# 22. Discord
+# 20. Discord
 
 slash commandはHTTP Interactionで扱える。
 
@@ -790,7 +700,7 @@ mention対応はGateway connectionが必要になる可能性があるため、�
 
 ---
 
-# 23. StrategyはRuleとは別問題
+# 21. StrategyはRuleとは別問題
 
 Ruleの目的:
 
@@ -812,7 +722,7 @@ Strategy Analyst Protocol
 
 ---
 
-# 24. Strategy Analyst Protocol
+# 22. Strategy Analyst Protocol
 
 想定フロー:
 
@@ -842,314 +752,27 @@ Strategyは必ずしも唯一の正解がない。
 
 ---
 
-# 25. Hybrid Query
+---
 
-RuleとStrategyを両方必要とする質問は多い。
-
-例:
-
-```text
-このカードコンボ強い？
-```
-
-処理:
-
-```text
-Rule Store
- ↓
-カードinteractionを確認
-
-Strategy Store
- ↓
-評価 / 定石 / 過去知見検索
-
-Strategy Analyst
- ↓
-統合回答
-```
-
-RuleをStrategy corpusから推測しない。
 
 ---
 
-# 26. Strategy Corpus
-
-Strategy documentは:
-
-```text
-1 document = 1 Markdown
-```
-
-とする。
-
-各Markdownの先頭にYAML front matterを持たせる。
-
-例:
-
-```markdown
-
----
-schema_version: 1
-game_id: agricola
-content_type: strategy
-authority: community
-
-title: "4-player Draft Guide"
-author: example-user
-source_id: ...
-source_url: ...
-source_type: article
-
-published_at: ...
-retrieved_at: ...
-
-edition: revised
-player_counts: [4]
-
-topics:
-  - draft
-  - occupations
-
-cards:
-  - braggart
 
 ---
 
-本文
-```
+---
 
 ---
 
-# 27. Strategy Metadata
-
-front matterに入れるもの:
-
-```text
-game_id
-content_type
-authority
-title
-author
-source_id
-source_url
-source_type
-published_at
-retrieved_at
-edition
-player_counts
-topics
-cards
-```
-
-入れないもの:
-
-```text
-openai_file_id
-vector_store_id
-indexed_at
-index_status
-```
-
-これらはderived stateであり、R2のsource documentに持たせない。
 
 ---
 
-# 28. Strategy Crawler
+---
 
-将来的にStrategy corpusを増やすためcrawlerを用意する。
-
-想定source:
-
-- BGG
-- Reddit
-- Wiki
-- 個人blog
-- tournament analysis
-- personal notes
-
-ただし無差別crawlerは避ける。
-
-最初は信頼できるsourceを少数選択する。
-
-Pipeline:
-
-```text
-Source
- ↓
-Crawler
- ↓
-Raw document
- ↓
-Normalizer
- ↓
-Markdown + YAML front matter
- ↓
-R2
- ↓
-Vector Store
-```
-
-Crawlerごとの出力形式は共通化する。
 
 ---
 
-# 29. StrategyとFine-tuning
-
-Strategy知識を覚えさせる目的だけでfine-tuningしない。
-
-まず:
-
-```text
-Strategy corpus
-+ Retrieval
-+ Strategy Analyst Protocol
-```
-
-で実装する。
-
-Fine-tuningを検討するのは、
-
-> 熟練プレイヤー特有の分析手順や判断パターン
-
-を大量の高品質exampleから学習させたい場合。
-
-つまり:
-
-```text
-knowledge → RAG
-
-reasoning style / behavioral pattern → fine-tuning候補
-```
-
----
-
-# 30. Dominion
-
-将来実現したい例:
-
-```text
-Supply
- ↓
-card abilities
- ↓
-interaction
- ↓
-strategy heuristics
- ↓
-candidate engines
-```
-
-重要な評価軸:
-
-- trash
-- draw
-- actions
-- payload
-- gains
-- buys
-- attacks
-- defense
-- terminal collision
-- synergy
-
-未知のSupplyでも構成的に推論できる設計を目指す。
-
----
-
-# 31. Agricola
-
-Strategy用途:
-
-- draft pick
-- occupation evaluation
-- minor improvement evaluation
-- card synergy
-- player count差
-- food engine
-- opportunity cost
-
-さらに:
-
-```text
-pick rate
-win rate
-average score
-card combinations
-```
-
-まで扱う場合、Vector Storeだけではなくstructured data / statistics toolが必要になる可能性がある。
-
----
-
-# 32. Eval
-
-RAG改善は感覚でprompt変更するのではなく、evalを作って測定する。
-
-Rule eval:
-
-```yaml
-question:
-expected:
-required_evidence:
-traps:
-```
-
-例:
-
-```text
-Trap:
-setup時のfilled plates数を
-ゲーム中に利用可能なplate数だと誤解しない
-```
-
-評価対象を分ける。
-
-### Retrieval Eval
-
-```text
-正しいrule sectionを取得できたか
-```
-
-### Adjudication Eval
-
-```text
-正しいcontextを与えた状態で
-正しい裁定ができたか
-```
-
----
-
-# 33. モデル選択
-
-単純に上位モデルへ変更するだけで問題解決しない。
-
-まず:
-
-```text
-Retrieval
-Protocol
-Context
-```
-
-を改善する。
-
-その上で同一evalを使って:
-
-```text
-Terra
-Sol
-reasoning effort
-```
-
-※ Terra / Sol は OpenAI ChatGPT 5.6 世代のモデル名。
-
-などを比較する。
-
-モデル差ではなくpipeline改善効果を測定できるようにする。
-
----
-
-# 34. 基本的なQuery Pipeline
+# 23. 基本的なQuery Pipeline
 
 最終的に目指す処理順:
 
@@ -1183,87 +806,11 @@ Chat Adapter
 
 ---
 
-# 35. 設計原則まとめ
-
-実装時の判断基準として以下を優先する。
-
-### Storage
-
-- R2がSource of Truth
-- DBを安易に増やさない
-- Vector Storeはderived index
-- 再構築可能にする
-
-### RAG
-
-- 検索結果1件だけで即答しない
-- Ruleは関連section・例外・exampleを横断確認
-- RetrievalとReasoningをdebug可能にする
-- RuleとStrategyを混同しない
-
-### Conversation
-
-- Slack threadをconversation単位にする
-- thread履歴からstandalone questionを作る
-- 過去Bot回答をルール根拠にしない
-
-### Knowledge
-
-- Ruleは公式source優先
-- Strategyはsource provenanceを保持
-- Strategy documentはMarkdown + YAML front matter
-- `games.yaml`はGameResolver用catalogに限定
-
-### Development
-
-- 最初から高度なPDF処理を作らない
-- 生PDFでbaselineを取る
-- evalで失敗を確認してから改善
-- fine-tuningは最後の選択肢
+---
 
 ---
 
-# 36. 最終的なプロダクト像
-
-最終的にはユーザーがSlack / Discordで、
-
-```text
-@bot 晩餐会テーブルに魚がない場合でも長老取れる？
-```
-
-と聞けば、ゲームを自動特定し、複数の関連ルールを照合したうえで根拠付きで裁定する。
-
-続けてthreadで、
-
-```text
-じゃあ2人戦だと？
-```
-
-と聞けば、会話contextから完全な質問へ復元して再度ルールを検索する。
-
-さらに:
-
-```text
-このDominionのSupplyなら何狙う？
-```
-
-や、
-
-```text
-このAgricolaドラフトなら初手どれ？
-```
-
-と聞けば、Rule corpusで合法性・カードinteractionを確認し、Strategy corpusや将来的な統計データを組み合わせて候補手と理由を提示する。
-
-目標は単なる「ルールブック検索Bot」ではなく、
-
-> **Ruleについては厳密な裁定者、Strategyについては根拠を持った分析者として振る舞うボードゲーム専門AI**
-
-とする。
-
----
-
-# 37. 付録: 初期案から引き継いだ細目
+# 24. 付録: 初期案から引き継いだ細目
 
 初期の実装指示書（`first-plan.md`, 現在は削除済み / git 履歴に残る）にしか書かれていなかった決定のうち、現在も有効なものをここに移した。
 
@@ -1278,16 +825,6 @@ personal     自分のプレイ知見・分析
 
 Rule回答の根拠に使えるのは `official` / `publisher` まで。
 
-## Content Type
-
-```text
-rulebook
-errata
-faq
-strategy
-card_guide
-play_log
-```
 
 ## Metadata方針
 
@@ -1320,15 +857,6 @@ mechanics
 
 検索時には最低限 `game_id` をfilterする。
 
-## Chat UXでのゲーム明示
-
-GameResolverによる自動判定に加えて、ユーザーが明示できる手段を用意する。
-
-```text
-/game nusfjord 株を1枚だけ買うのって強い？
-```
-
-暗黙の状態管理（channel単位のgame context等）は初期実装では増やさない。
 
 ## Retrieval時のVision fallback（将来）
 
@@ -1348,7 +876,7 @@ Visionで再確認
 
 ---
 
-# 38. ディレクトリ構成
+# 25. ディレクトリ構成
 
 ```text
 .
@@ -1360,7 +888,7 @@ Visionで再確認
 │       ├── rule/               #   .gitignore。R2へupload
 │       ├── strategy/           #   .gitignore
 │       └── raw/                #   .gitignore。ingest対象外
-├── evals/                      # eval dataset (yaml)。コードではなくデータ
+├── evals/                      # promptfooconfig.yaml, cases/, provider.py
 ├── docs/
 ├── src/tribunal/
 │   ├── entrypoints/            # uvicorn 起動対象 (platformごと)
@@ -1378,8 +906,7 @@ Visionで再確認
 │   │   ├── openai/             #   files / vector_store / responses / retrieval
 │   │   └── r2/
 │   ├── knowledge/              # catalog読み込み / front matter / reconcileの差分計算
-│   ├── eval/                   # eval runner
-│   └── cli/                    # sync / gc / doctor / eval
+│   └── cli/                    # sync / gc / doctor
 └── tests/
 ```
 
@@ -1392,41 +919,8 @@ entrypoints → adapters → application → domain
 cli → knowledge → infra
 ```
 
-## inboundとoutboundを名前で分ける
-
-`adapters/`は**呼ばれる側**(Slack / Discord)だけに使う。OpenAIやR2のような**呼ぶ側**は`infra/`に置く。
-
-両方を`adapters/`に入れると、依存方向が逆のものが同居して(`adapters/slack`はapplicationを呼び、`adapters/openai`はapplicationから呼ばれる)レイヤ規約が読めなくなる。
-
-## portを切るのはretrievalだけ
-
-E1(Responses APIの`file_search`) → E2(明示的Retrieval API)で**実装が2つになることが確定している**ため、retrievalは`application/ports.py`にProtocolを置き、実装を`infra/openai/`側に寄せる。
-
-それ以外は必要になるまでProtocolを作らない。個人プロジェクトで全レイヤにportを切るのは過剰。
-
-## knowledge / cliはbot runtimeから切り離す
-
-ingestは手元またはCIで実行し、**Sprite上のbotはR2にもcatalogにも触らない**(「Ingest経路」)。
-
-したがって`adapters/` `application/`から`knowledge/`への import が生えたら設計が壊れたサイン。逆(`cli/` → `knowledge/` → `infra/`)は正常。
-
-## games / evalsはrepo直下に置く
-
-どちらも「人が宣言・レビューするデータ」でコードではないため、`src/`の中に入れない。schema validationをCIに載せるときの対象も明確になる。
-
-`games/`はmetadataとbytesが同居するが、**pushされるのは`meta.yaml`と`games.yaml`だけ**(「R2をSource of Truthとする」)。ローカルのディレクトリがそのままR2の姿になるので、uploadが単純になる。
-
-## protocol promptは.mdファイルとして使う側にcolocateする
-
-Rule Adjudicator Protocolはevalで前後比較する対象なので、コード内の文字列リテラルにせず`.md`として置き実行時に読む。
-
-```text
-application/rule/prompts/adjudicator.md
-application/rule/prompts/answer_format.md
-application/strategy/prompts/analyst.md
-```
-
-diffがreviewで見え、eval結果と紐づけられる。
+eval runnerは自作しない。promptfooに`evals/promptfooconfig.yaml`とPython providerを置き、
+providerが`AnswerService`を叩く。promptfooはnpmパッケージなのでbotの実行環境には入らない。
 
 ## 名前
 
@@ -1443,9 +937,9 @@ Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わ
 
 ---
 
-# 39. Intent判定の仕様
+# 26. Intent判定の仕様
 
-「全体アーキテクチャ」「基本的なQuery Pipeline」のIntent Routerは`rule` / `strategy` / `hybrid`の3語しか決めていなかった。実装に入る段階で以下を確定した。
+Intent Routerは当初`rule` / `strategy` / `hybrid`の3語しか決めていなかった。実装に入る段階で以下を確定した。
 
 ## 判定は質問文だけを見る
 
@@ -1459,7 +953,7 @@ Sprite名も揃えた。**稼働後にSprite名を変えると公開URLが変わ
 
 出力は`Rule` / `Strategy`の2値 + `Ambiguous`。
 
-「Hybrid Query」のhybridは「Rule Storeでinteraction確認 → Strategy Storeで評価検索 → Strategy Analystが統合」で、**promptを選ぶ話ではなくretrievalを2本走らせて統合する話**。retrievalが2本必要になる段階まで意思決定を後回しにする。3値にすると`hybrid`を返せる型なのに実装が対応しない状態になる。
+hybridは「Rule Storeでinteraction確認 → Strategy Storeで評価検索 → Strategy Analystが統合」で、**promptを選ぶ話ではなくretrievalを2本走らせて統合する話**。retrievalが2本必要になる段階まで意思決定を後回しにする。3値にすると`hybrid`を返せる型なのに実装が対応しない状態になる。
 
 ## Ambiguousは既定側（Rule）で処理する
 

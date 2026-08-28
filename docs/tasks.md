@@ -49,14 +49,19 @@
 ここが本題。**先に eval を作る**ことで、以降の改善が「体感」でなく数字になる。
 
 - G1 生 PDF での baseline 評価
-- O1 Rule Eval Dataset(20〜50 問)、O2 Retrieval Eval、O3 Adjudication Eval
+- O1 Rule Eval Dataset(20〜50 問)、O3 Adjudication Eval
 - F1 Rule Adjudicator Protocol、F2 回答フォーマット
+
+eval harness は promptfoo。`evals/` に config とケースを置き、Python provider から
+`AnswerService` を叩く。runner は自作しない。
 
 完了条件:
 
 - baseline の数値が出ている
 - Adjudicator Protocol の適用前後で差分が測れる
-- 誤答を retrieval miss / reasoning miss に切り分けられる
+
+O2 Retrieval Eval は Phase 4 へ送る。`Source` が title / uri しか持たず file_id 単位で
+dedup されるので、chunk / score / 順位が残らず「正しい section を引けたか」を今は測れない。
 
 ## Phase 3. 会話として使える (Chat UX)
 
@@ -77,11 +82,13 @@
 Phase 2 の eval が下支えになっている前提で着手する。
 
 - E2 Explicit Retrieval API、E3 Multi-query Retrieval
+- O2 Retrieval Eval（E2 で chunk / score が取れるようになってから）
 - 必要なら G2 page-aware Markdown
 
 完了条件:
 
 - retrieved chunk と score をアプリ側で確認できる
+- 誤答を retrieval miss / reasoning miss に切り分けられる
 - O2 / O3 の数値が baseline から改善している
 
 ## Phase 5. Strategy に答えられる
@@ -146,7 +153,7 @@ crawl で件数が増え、**人が把握しきれなくなる**のがこの Pha
 プロダクト名 = **tribunal**。package / repo / Sprite すべて`tribunal`に統一済み。
 
 - `src/tribunal/`、`pyproject.toml`、全import、起動対象`tribunal.entrypoints.slack:app`
-- `README.md`、`CLAUDE.md`、`docs/sprites.md`、`note.md`のrunbook
+- `README.md`、`CLAUDE.md`、`note.md`のrunbook
 - repo: `github.com/Sho2010/tribunal`
 
 Sprite はまだ作成していないので、`note.md` の runbook 通り`sprite create tribunal`から始める(`.sprite`は`sprite use`が書き換える)。
@@ -359,13 +366,12 @@ examples
 基本:
 
 ```text
-結論
-根拠となるルール
-解釈
-引用
+【ルール引用】
+【分析・検討】
+【結論】
 ```
 
-原則日本語。
+結論は最後。先に書かせない。原則日本語。
 
 可能なら:
 
@@ -489,8 +495,11 @@ Chat Adapter
 ```text
 rule
 strategy
-hybrid
+ambiguous
 ```
+
+ambiguous は Rule に倒す。hybrid は作らない（retrieval を 2 本走らせる話なので、
+2 本必要になるまで決めない）。
 
 ---
 
@@ -685,12 +694,22 @@ traps:
 - 複数page横断
 
 ### O2. Retrieval Eval
+Phase 4。E2 で chunk / score が取れるようになってから着手する。
+
 - 正しいsectionが検索できたか
 - ranking
 - irrelevant chunk
 
 ### O3. Adjudication Eval
-正しいcontextを与えた状態で裁定できたか。
+最終回答の質を採点する。promptfoo の assertion で、
+
+- 出力フォーマット（【ルール引用】→【分析・検討】→【結論】の順）
+- 裁定が expected と一致するか
+- required_evidence が実際に引用されているか
+- traps を踏んでいないか
+- 記載がない場合に「資料から明確な記載はありません」と言えているか
+
+を見る。まず 1 ゲーム 3〜5 問で経路を通し、数値が出るところまでを 1 単位とする。
 
 ### O4. Model比較
 同じevalで、
