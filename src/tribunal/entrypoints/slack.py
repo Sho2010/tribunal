@@ -1,4 +1,8 @@
+import logging
+
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO)
 
 # create_app() が env を読む。それより前に .env を読まないと KeyError。
 load_dotenv()

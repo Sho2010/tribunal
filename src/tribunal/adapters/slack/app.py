@@ -1,10 +1,11 @@
 import logging
 import os
 import re
+import time
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
-from slack_bolt import App, Say
+from slack_bolt import Ack, App, Say
 from slack_bolt.adapter.fastapi import SlackRequestHandler
 
 from tribunal.application.answer_service import AnswerService, StrategyUnavailable
@@ -15,6 +16,7 @@ from tribunal.infra.openai.file_search_retriever import (
     STRATEGY_STORE_ENV,
     FileSearchRetriever,
 )
+from tribunal.infra.sprites import task_hold
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +40,23 @@ def _build_bolt_app(answer_service: AnswerService, *, verify_token: bool = True)
         token_verification_enabled=verify_token,
     )
 
+    def _hold_name(event: dict[str, Any]) -> str:
+        return f"slack-answer-{event.get('thread_ts') or event.get('ts')}"
+
+    def ack_and_hold(ack: Ack, event: dict[str, Any]) -> None:
+        # ack を返し終えると inbound request が切れた扱いになり、Sprite は pause して
+        # よくなる。lazy 側で取りに行くと間に合わないので、ここで hold を立てる。
+        task_hold.acquire(_hold_name(event))
+        ack()
+
     def respond_to_mention(event: dict[str, Any], say: Say) -> None:
         question = _strip_mention(event.get("text", ""))
         thread_ts = event.get("thread_ts") or event.get("ts")
         logger.info("app_mention received: %r", question)
         try:
+            started = time.monotonic()
             say(text=ACCEPTED_REPLY, thread_ts=thread_ts)
+            logger.info("accepted reply posted in %.2fs", time.monotonic() - started)
             answer = answer_service.ask(question)
             logger.info("answer generated: %d chars", len(answer.text))
             say(text=_format(answer), thread_ts=thread_ts)
@@ -53,9 +66,11 @@ def _build_bolt_app(answer_service: AnswerService, *, verify_token: bool = True)
         except Exception:
             logger.exception("failed to respond: %r", question)
             say(text=ERROR_REPLY, thread_ts=thread_ts)
+        finally:
+            task_hold.release(task_hold.sanitize_name(_hold_name(event)))
 
     # ack は 3 秒以内に返す必要がある。回答生成はそれより長いので lazy 側で走らせる。
-    bolt_app.event("app_mention")(ack=lambda ack: ack(), lazy=[respond_to_mention])
+    bolt_app.event("app_mention")(ack=ack_and_hold, lazy=[respond_to_mention])
 
     return bolt_app
 
