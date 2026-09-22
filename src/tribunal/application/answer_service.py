@@ -1,8 +1,11 @@
 from tribunal.application.pipeline.intent import (
-    Classified,
+    Classification,
     Intent,
     IntentClassifier,
+    IntentClassifierChain,
+    IntentQuery,
     KeywordIntentClassifier,
+    TagIntentClassifier,
 )
 from tribunal.application.ports import Retriever
 from tribunal.domain.answer import Answer
@@ -30,25 +33,25 @@ class AnswerService:
     ) -> None:
         self._retriever = retriever
         self._strategy_retriever = strategy_retriever
-        self._classifier = classifier or KeywordIntentClassifier()
+        self._classifier = classifier or IntentClassifierChain(
+            TagIntentClassifier(), KeywordIntentClassifier()
+        )
 
     def ask(self, question: str, *, game_id: str | None = None) -> Answer:
-        classified = self._classifier.classify(question)
-        if classified.intent is Intent.STRATEGY:
-            return self._ask_strategy(classified, game_id=game_id)
-        # AMBIGUOUS は Rule に倒す。rule 質問を strategy で答えると非公式資料で
-        # ルールを語ることになる。
-        return self._ask_rule(classified, game_id=game_id)
+        classification = self._classifier.classify(IntentQuery.of(question))
+        if classification.intent is Intent.STRATEGY:
+            return self._ask_strategy(classification, game_id=game_id)
+        return self._ask_rule(classification, game_id=game_id)
 
-    def _ask_rule(self, classified: Classified, *, game_id: str | None) -> Answer:
-        answer = self._retriever.answer(classified.question, game_id=game_id)
-        return _with_note(answer, RULE_NOTE if not classified.tagged else None)
+    def _ask_rule(self, classification: Classification, *, game_id: str | None) -> Answer:
+        answer = self._retriever.answer(classification.query.question, game_id=game_id)
+        return _with_note(answer, RULE_NOTE if not classification.tagged else None)
 
-    def _ask_strategy(self, classified: Classified, *, game_id: str | None) -> Answer:
+    def _ask_strategy(self, classification: Classification, *, game_id: str | None) -> Answer:
         if self._strategy_retriever is None:
             raise StrategyUnavailable(STRATEGY_UNAVAILABLE)
-        answer = self._strategy_retriever.answer(classified.question, game_id=game_id)
-        return _with_note(answer, STRATEGY_NOTE if not classified.tagged else None)
+        answer = self._strategy_retriever.answer(classification.query.question, game_id=game_id)
+        return _with_note(answer, STRATEGY_NOTE if not classification.tagged else None)
 
 
 def _with_note(answer: Answer, note: str | None) -> Answer:

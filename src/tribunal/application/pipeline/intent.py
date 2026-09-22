@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Protocol
 
@@ -13,18 +13,37 @@ class Intent(Enum):
 
 
 @dataclass(frozen=True)
-class Classified:
-    """判定結果と、タグを除去した質問文。"""
+class IntentQuery:
+    """classifier に渡す質問。前の classifier の整形結果と hint を引き継ぐ。"""
+
+    original: str
+    question: str
+    hints: tuple[str, ...] = ()
+
+    @classmethod
+    def of(cls, text: str) -> "IntentQuery":
+        return cls(original=text, question=text.strip())
+
+    def with_question(self, question: str) -> "IntentQuery":
+        return replace(self, question=question)
+
+    def with_hint(self, hint: str) -> "IntentQuery":
+        return replace(self, hints=(*self.hints, hint))
+
+
+@dataclass(frozen=True)
+class Classification:
+    """判定結果と、判定した classifier が整形・注釈した後の query。"""
 
     intent: Intent
-    question: str
+    query: IntentQuery
     tagged: bool
 
 
 class IntentClassifier(Protocol):
-    """質問文から intent を判定する。"""
+    """質問から intent を判定する。決められなければ AMBIGUOUS を返す。"""
 
-    def classify(self, question: str) -> Classified: ...
+    def classify(self, query: IntentQuery) -> Classification: ...
 
 
 _STRATEGY_TAG = re.compile(
@@ -63,27 +82,55 @@ STRATEGY_KEYWORDS = (
 )
 
 
+class TagIntentClassifier:
+    """行頭の明示タグで判定し、タグを質問文から除去する。"""
+
+    def classify(self, query: IntentQuery) -> Classification:
+        text = query.question
+        stripped = _STRATEGY_TAG.sub("", text, count=1)
+        if stripped != text:
+            return Classification(
+                Intent.STRATEGY, query.with_question(stripped.strip()), tagged=True
+            )
+
+        stripped = _RULE_TAG.sub("", text, count=1)
+        if stripped != text:
+            return Classification(Intent.RULE, query.with_question(stripped.strip()), tagged=True)
+
+        return Classification(Intent.AMBIGUOUS, query, tagged=False)
+
+
 class KeywordIntentClassifier:
-    """明示タグ → rule keyword → strategy keyword → 既定 Rule の順で判定する。"""
+    """rule / strategy の keyword のうち、片方だけが含まれていればそちらと判定する。"""
 
-    def classify(self, question: str) -> Classified:
-        stripped = _STRATEGY_TAG.sub("", question, count=1)
-        if stripped != question:
-            return Classified(Intent.STRATEGY, stripped.strip(), tagged=True)
+    def classify(self, query: IntentQuery) -> Classification:
+        text = query.question
+        lowered = text.lower()
+        rule_hits = [keyword for keyword in RULE_KEYWORDS if keyword in text]
+        strategy_hits = [keyword for keyword in STRATEGY_KEYWORDS if keyword.lower() in lowered]
 
-        stripped = _RULE_TAG.sub("", question, count=1)
-        if stripped != question:
-            return Classified(Intent.RULE, stripped.strip(), tagged=True)
+        if rule_hits or strategy_hits:
+            hint = f"keyword: rule={','.join(rule_hits)} strategy={','.join(strategy_hits)}"
+            query = query.with_hint(hint)
 
-        text = question.strip()
-        # rule を先に見る。「強い制約ですか」のように strategy 語を含む rule 質問を拾うため。
-        is_rule = any(keyword in text for keyword in RULE_KEYWORDS)
-        is_strategy = any(keyword.lower() in text.lower() for keyword in STRATEGY_KEYWORDS)
+        if rule_hits and not strategy_hits:
+            return Classification(Intent.RULE, query, tagged=False)
+        if strategy_hits and not rule_hits:
+            return Classification(Intent.STRATEGY, query, tagged=False)
+        return Classification(Intent.AMBIGUOUS, query, tagged=False)
 
-        if is_rule and is_strategy:
-            return Classified(Intent.AMBIGUOUS, text, tagged=False)
-        if is_rule:
-            return Classified(Intent.RULE, text, tagged=False)
-        if is_strategy:
-            return Classified(Intent.STRATEGY, text, tagged=False)
-        return Classified(Intent.RULE, text, tagged=False)
+
+class IntentClassifierChain:
+    """AMBIGUOUS 以外が返るまで順に判定し、誰も決められなければ Rule にする。"""
+
+    def __init__(self, *classifiers: IntentClassifier) -> None:
+        self._classifiers = classifiers
+
+    def classify(self, query: IntentQuery) -> Classification:
+        for classifier in self._classifiers:
+            classification = classifier.classify(query)
+            if classification.intent is not Intent.AMBIGUOUS:
+                return classification
+            query = classification.query
+        # rule 質問を strategy で答えると非公式資料でルールを語ることになる。
+        return Classification(Intent.RULE, query, tagged=False)
