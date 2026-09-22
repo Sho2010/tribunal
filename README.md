@@ -7,6 +7,8 @@ Slack からボードゲームのルール / 戦略を質問できる RAG chatbo
 - [sprite](https://docs.sprites.dev/cli/installation/) - sprites.dev CLI
 - [rclone](https://github.com/rclone/rclone)
 - uv
+- [ocrmypdf](https://github.com/ocrmypdf/ocrmypdf)
+- [docling](https://docling.ai/)
 
 ## Environment Variables
 
