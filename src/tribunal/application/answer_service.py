@@ -3,6 +3,7 @@ from tribunal.application.pipeline.intent import (
     Intent,
     IntentClassifier,
     IntentClassifierChain,
+    IntentQuery,
     KeywordIntentClassifier,
     TagIntentClassifier,
 )
@@ -37,19 +38,19 @@ class AnswerService:
         )
 
     def ask(self, question: str, *, game_id: str | None = None) -> Answer:
-        classification = self._classifier.classify(question)
+        classification = self._classifier.classify(IntentQuery.of(question))
         if classification.intent is Intent.STRATEGY:
             return self._ask_strategy(classification, game_id=game_id)
         return self._ask_rule(classification, game_id=game_id)
 
     def _ask_rule(self, classification: Classification, *, game_id: str | None) -> Answer:
-        answer = self._retriever.answer(classification.question, game_id=game_id)
+        answer = self._retriever.answer(classification.query.question, game_id=game_id)
         return _with_note(answer, RULE_NOTE if not classification.tagged else None)
 
     def _ask_strategy(self, classification: Classification, *, game_id: str | None) -> Answer:
         if self._strategy_retriever is None:
             raise StrategyUnavailable(STRATEGY_UNAVAILABLE)
-        answer = self._strategy_retriever.answer(classification.question, game_id=game_id)
+        answer = self._strategy_retriever.answer(classification.query.question, game_id=game_id)
         return _with_note(answer, STRATEGY_NOTE if not classification.tagged else None)
 
 
