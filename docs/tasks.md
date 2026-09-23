@@ -8,6 +8,10 @@
 
 # Phase (機能マイルストーン)
 
+> **Phase は着手順の目安であって、進捗の記録ではない。** 実際には Phase をまたいで進んでいる
+> （Phase 1 の `meta.yaml` / R2 が未達のまま、Phase 3 の intent 判定が入っている）。
+> 現状を知りたいときは Phase 番号ではなく `CLAUDE.md` の「何のプロジェクトか」とコードを見る。
+
 ## Phase 0. 疎通 (Sprites + Slack)
 
 **最優先。** RAG より先に、常駐と wake の挙動を実機で確認する。

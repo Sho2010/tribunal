@@ -8,7 +8,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ゴールは「ルールブック検索 bot」ではなく、**Rule については厳密な裁定者、Strategy については根拠を持った分析者**として振る舞うこと。
 
-コードは **Phase 0（Sprites + Slack 疎通）** の段階: `app_mention` を受けて固定文字列を返すだけ。retrieval / ingest / R2 / `games/` の読み込みはすべて未実装。着手順は `docs/tasks.md` 先頭の Phase を見る。
+**動いているコードが正。この節が実装と食い違っていたらコードを信じ、この節を直す。**
+
+Slack の `app_mention` → intent 判定 → Vector Store 検索 → protocol prompt で回答、までが動く。
+Rule / Strategy の両方の protocol prompt が mount され、Strategy Store 未設定なら Rule で代替せずその旨を返す。
+
+未実装: R2 クライアント、`meta.yaml` とその読み込み、sync CLI、GameResolver、thread 履歴の取得、
+standalone question 生成、query decomposition、明示的な Retrieval API、eval。
+
+`docs/tasks.md` の Phase は着手順の目安であって、進捗の記録ではない。Phase 1 の完了条件（`meta.yaml` 宣言と
+R2 経由の ingest）は未達のまま、Phase 3 の intent 判定が先に入っている。**Phase 番号で現状を語らない。**
 
 ## コマンド
 
@@ -167,19 +176,23 @@ doc 側が変わると参照が腐る。
 
 ## アーキテクチャ
 
-レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。全体のディレクトリ構成は下記（現状はこの一部だけが存在する）。
+レイヤの依存方向は **entrypoints → adapters → application → domain** の一方向。
+下記のツリーは目標形で、`(未)` が付いているものはまだ無い。
 
 ```text
-games/                # games.yaml, schema/, <game_id>/{meta.yaml, rule/, strategy/, raw/}
-evals/                # promptfooconfig.yaml, cases/, provider.py
+games/                # <game_id>/{rule/, strategy/, raw/} は実在
+  games.yaml          #   実在（ただし読むコードはまだ無い）
+  schema/             #   (未)
+  <game_id>/meta.yaml #   (未)
+evals/                # (未) promptfooconfig.yaml, cases/, provider.py
 src/tribunal/
   entrypoints/        # uvicorn 起動対象
-  adapters/           # inbound: chat platform
+  adapters/           # inbound: chat platform（slack のみ）
   application/        # answer_service.py, ports.py, pipeline/, rule/, strategy/
   domain/
-  infra/              # outbound: openai/, r2/
-  knowledge/          # meta.yaml 読み込み / front matter / reconcile
-  cli/
+  infra/              # outbound: openai/, sprites/。r2/ は (未)
+  knowledge/          # (未) meta.yaml 読み込み / front matter / reconcile
+  cli/                # (未)
 ```
 
 命名で守ること:
@@ -196,7 +209,9 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
-- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。呼び分け（Intent Router）は未実装で、現在 mount されるのは Rule 側だけ。
+- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy は `TRIBUNAL_STRATEGY_VECTOR_STORE_ID` が設定されているときだけ有効。
+- `src/tribunal/application/pipeline/intent.py` — `TagIntentClassifier` → `KeywordIntentClassifier` を `IntentClassifierChain` で繋ぎ、どちらも決められなければ Rule に倒す。明示タグ（`ルール:` / `戦略:` / `[ルール]` / `[strategy]`）は質問文から除去してから retriever へ渡す。タグなしで処理したときは、どちらとして答えたかを回答末尾に添える。
+- `src/tribunal/infra/sprites/task_hold.py` — Sprites は inbound request が 30 秒ほど途切れると pause し、生成中の処理も一緒に凍る。Tasks API に task を登録している間だけ pause しないので、ack の時点で hold を取り、回答を返し終えたら解放する。Sprites 外では socket が無く、hold なしで動く。
 - `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。store 非依存で、`for_rule()` / `for_strategy()` が読む env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）と注入する prompt だけが違う。**片方が未設定のとき他方へ fallback しない**（trust boundary のため）。
 - `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。
 - `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
