@@ -95,12 +95,35 @@ uv run pytest                # test
 
 **何が正かは寿命で分かれる。** 迷ったら上から順に見る。
 
-1. **動いているコードとテスト** — 実装された振る舞いはこれが正
-2. **`docs/specs/`** — いま保証している契約。外から観測できる受け入れ条件
-3. **`.claude/skills/tribunal-decisions`** — 過去の設計判断とその理由。
+1. **動いているコードとテスト** — 実際の振る舞いはこれを見る
+2. **`docs/specs/`** — 保証しているはずの契約。外から観測できる受け入れ条件
+3. **`tribunal-decisions` skill** — 過去の設計判断とその理由。
    **現在の振る舞いを定義しない。** 作業が触る領域の 1 本だけを目次から引く
 4. **`docs/future/`** — まだ作っていないものの構想。決定でも仕様でもないので、
    **これを理由に実装を縛らない**
+
+1 と 2 は「実際にどうなっているか」と「どうあるべきか」なので、**どちらかが自動的に正ではない**
+（下の「doc は寿命で分かれる」を読む）。
+
+### 手を動かす前に決定記録を引く
+
+**次に触れる作業では、コードを読む前に `tribunal-decisions` skill を起動し、
+目次の「読むとき」列から該当する 1 本を読む。**
+
+- protocol prompt（`adjudicator.md` / `analyst.md`）を変える
+- intent 判定・タグ・keyword を変える
+- retrieval の実装、Vector Store、`file_search` の使い方を変える
+- Rule と Strategy の分け方、fallback、authority の扱いを変える
+- R2 / `meta.yaml` / `games.yaml` / ingest / sync を触る
+- Slack の event 種別、ack と生成の分離、返信先を変える
+- Sprites の service 構成、`task_hold.py` を触る
+- eval の置き場所や harness を決める
+- ディレクトリ構成、port（Protocol）の切り方を変える
+
+**却下済みの案を再提案する前にも読む。** 理由が今も成立しているか確認してから提案する。
+
+逆に、**実装が明らかな routine な変更では引かない**（typo 修正、テスト追加、既存パターンの踏襲）。
+全部ロードするのは禁止。作業に関係する 1 本だけ。
 
 作業の段取り:
 

@@ -1,6 +1,6 @@
 ---
 name: tribunal-decisions
-description: tribunal の過去の設計判断とその理由を調べる。変更が下の表の領域に触れるときだけ読む。現在の振る舞いはコードと docs/specs/ が定義しており、この skill は定義しない。
+description: tribunal の設計判断の理由を調べる。次を変更・追加するとき、および「なぜこうなっているのか」「これを変えてよいか」を問われたときに使う - protocol prompt (adjudicator.md / analyst.md)、intent 判定やタグ、retrieval や Vector Store や file_search、Rule と Strategy の分離、R2 / meta.yaml / games.yaml / catalog / ingest / sync、Slack adapter の event や ack、Sprites の service や task hold、eval や promptfoo、ディレクトリ構成や port の切り方。却下済みの案を再提案する前にも読む。実装が明らかな routine な変更には使わない。
 ---
 
 # tribunal decisions
