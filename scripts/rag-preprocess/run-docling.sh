@@ -56,9 +56,13 @@ echo "==> Docling pages $PAGES of $TOTAL  $INPUT -> $OUTPUT_DIR/$NAME.{md,json}"
 
 mkdir -p "$OUTPUT_DIR"
 docling convert "$INPUT" \
-    --from pdf --to md --to json \
-    --pipeline standard --no-ocr \
-    --tables --table-mode accurate \
+    --from pdf \
+    --to md \
+    --to json \
+    --pipeline standard \
+    --no-ocr \
+    --tables \
+    --table-mode accurate \
     --image-export-mode placeholder \
     --page-range "$FIRST-$LAST" \
     --output "$OUTPUT_DIR"
