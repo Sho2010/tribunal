@@ -36,3 +36,4 @@ event driven ingest は v1 では作らない。catalog が git 上にある構�
 - R2 へのドラッグ&ドロップ運用が不便になった段階で event 経路を足せる。
   reconcile が冪等なので後から足しても共存する
 - 扱う document が数件のうちは、reconcile 自体を作らず手で Vector Store に載せても回る
+- いつ作るか、および ETag を差分判定に使えない件は [0016](0016-automate-ingest-only-past-a-threshold.md)

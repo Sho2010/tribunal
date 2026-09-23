@@ -39,6 +39,7 @@ description: tribunal の過去の設計判断とその理由を調べる。変�
 | 0013 | 2026-08-22 | Accepted | [Slack では mention だけ受け thread に返す](references/0013-slack-mention-only.md) | Slack の event 種別、ack と生成の分離、返信先を変えるとき |
 | 0014 | 2026-09-23 | Accepted | [eval runner を自作せず promptfoo を使う](references/0014-do-not-build-an-eval-runner.md) | eval の置き場所、harness、assertion の作り方を決めるとき |
 | 0015 | 2026-08-19 | Accepted | [Vector Store + File Search で始める](references/0015-use-vector-store-not-direct-file-input.md) | retrieval の経路そのもの、file_id の管理方法を変えるとき |
+| 0016 | 2026-09-23 | Accepted | [ingest の自動化は規模が閾値を超えてから](references/0016-automate-ingest-only-past-a-threshold.md) | sync CLI / gc / doctor を作るとき、差分判定の方法を決めるとき |
 
 決定が変わったら、**理由を書き換えずに新しい番号で追加する。**
 古い方の Status を `Superseded` にし、両方から相互にリンクする。

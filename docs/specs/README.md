@@ -15,6 +15,7 @@
 | --- | --- |
 | Rule / Strategy の境界 | [知識の境界](knowledge-boundary.md) |
 | 質問の振り分け | [intent routing](intent-routing.md) |
+| 常駐と wake | [runtime availability](runtime-availability.md) |
 
 ## 食い違っていたとき
 

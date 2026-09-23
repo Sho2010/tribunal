@@ -60,3 +60,21 @@ desired（catalog）と actual（Vector Store）の diff を取って適用す�
 
 置き場所の案: `src/tribunal/knowledge/`（catalog 読み込み / front matter / 差分計算）と
 `src/tribunal/cli/`（sync / gc / doctor）。`adapters/` `application/` からは import しない。
+
+## 受け入れ条件
+
+```text
+1 ゲームの rulebook を R2 に置き meta.yaml に宣言する
+ → 手動で Vector Store に載せる
+ → Slack でルール質問に出典付きで答えられる
+```
+
+```text
+宣言していない R2 object が ingest されない
+```
+
+sync CLI を作ったあと（決定 0016 の閾値を超えてから）:
+
+```text
+sync を 2 回連続で実行しても差分が出ない（冪等の確認）
+```

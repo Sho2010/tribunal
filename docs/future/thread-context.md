@@ -29,3 +29,13 @@ follow-up をそのまま検索しない。thread context から独立した質�
 
 `thread_ts` は返信先と hold 名にしか使っていない。**thread 履歴の取得も standalone question 生成も無い。**
 現在 Intent 判定に渡っているのは生の質問文。
+
+## 受け入れ条件
+
+```text
+thread で「じゃあ2人戦だと？」と続けて、意図通りに解決される
+```
+
+```text
+過去の Bot 回答がルール根拠として使われていない
+```

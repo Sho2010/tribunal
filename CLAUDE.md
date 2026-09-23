@@ -16,8 +16,8 @@ Rule / Strategy の両方の protocol prompt が mount され、Strategy Store �
 未実装: R2 クライアント、`meta.yaml` とその読み込み、sync CLI、GameResolver、thread 履歴の取得、
 standalone question 生成、query decomposition、明示的な Retrieval API、eval。
 
-`docs/tasks.md` の Phase は着手順の目安であって、進捗の記録ではない。Phase 1 の完了条件（`meta.yaml` 宣言と
-R2 経由の ingest）は未達のまま、Phase 3 の intent 判定が先に入っている。**Phase 番号で現状を語らない。**
+実装は一直線には進んでいない。ingest（`meta.yaml` / R2）が未着手のまま intent 判定が先に入っている。
+**「Phase いくつ」のような段階で現状を語らない。** 何が動くかは上に書いたものが正。
 
 ## コマンド
 
@@ -46,36 +46,32 @@ uv run pytest                # test
 
 ### 小さく作る
 
-**タスクは動く最小単位まで割る。** `docs/tasks.md` の小見出しですら大きいことがあるので、
-その場合はさらに割る。目安:
+**タスクは動く最小単位まで割る。** 渡された単位が大きいことはよくあるので、その場合はさらに割る。目安:
 
 - **1 PR は「1 つのことができるようになる」まで。** 先回りして周辺を整えない
 - **動くものを先に出す。** 抽象化・拡張性・将来の分岐は、2 つ目の使い道が出てから
 - 設計判断が要る大きさになったら、それは割り方が粗いサイン。**手を動かす前に議論する**
 
-**`docs/tasks.md` は着手順の参考であって、そのままの粒度で実装する契約ではない。**
-
-**`docs/tasks.md` の小見出し 1 つ（`A1`, `C3`, `D2`）= 1 ブランチ = 1 worktree = 1 セッション。**
+**1 つのことができるようになる単位 = 1 ブランチ = 1 worktree = 1 セッション。**
 
 - worktree は `claude --worktree <task-id>-<slug>` で作る。本体ツリーへの書き込みが機械的にブロックされる
 - **worktree 内では commit / push を確認なしで行ってよい。PR を立てるまで confirm 少なめで進める。** マージは PR 経由（ユーザーが review する）
 - **本体ツリー（main の作業ツリー）では commit しない。** worktree 内のファイルだけを触る（本体の読み取りは可）
-- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は決定記録側（`tribunal-decisions`）。**タスク識別子（`A1` / `B1` …）は本文に書かない**（branch 名と title にある）。型は repo 直下の `pr-template.md`
+- **PR 本文に「なぜそうしたか」を書かない。** 書くのは「何を変更したか / 何ができるようになったか / 注意が必要な点 / 読むのに前提が要る点」の 4 つだけ。設計判断の理由は決定記録側（`tribunal-decisions`）。**タスク識別子（Issue 番号など）は本文に書かない**（branch 名と title にある）。型は repo 直下の `pr-template.md`
 
 ### タスク識別子で会話しない（厳守）
 
-**ユーザーとの議論・説明・提案では `A1` / `C3` / `D2` のような `docs/tasks.md` の識別子を使わない。**
+**ユーザーとの議論・説明・提案で、タスクを識別子で呼ばない。** Issue 番号（`#12`）も同じ。
 ユーザーは番号を覚えていないので、識別子だけ言われても何の話か分からない。
 
 - ✅ 「Vector Store の sync CLI（desired と actual の diff を取って適用するやつ）をやりますか」
-- ❌ 「次は D2 をやりますか」
-- ❌ 「D2（sync CLI）をやりますか」— 括弧で補っても識別子を先に出さない
+- ❌ 「次は #12 をやりますか」
+- ❌ 「#12（sync CLI）をやりますか」— 括弧で補っても識別子を先に出さない
 
-識別子を書いてよいのは、**人間向けの散文ではない場所**だけ:
-branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
+識別子を書いてよいのは、**人間向けの散文ではない場所**だけ: branch 名、PR title、Issue 自身。
 これらに触れる必要があるときも、会話文では「sync CLI のブランチ」のように内容で呼ぶ。
 
-ユーザーが `D2` のように識別子で指してきた場合は、**こちらの返答では内容に開いて答える**
+ユーザーが `#12` のように識別子で指してきた場合は、**こちらの返答では内容に開いて答える**
 （「sync CLI ですね。〜」）。
 
 ### コメント / docstring
@@ -108,12 +104,8 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 
 作業の段取り:
 
-- **`docs/tasks.md`** — 先頭の **Phase が着手順**で、各 Phase に完了条件がある。その下の A〜O がタスク分解。
-  **Phase は進捗の記録ではない**（実際には Phase をまたいで進んでいる）
 - **`note.md`** — 初回デプロイ runbook（Sprites）
 - **`pr-template.md`**（repo 直下）— PR 本文の型
-- **`docs/context.md`** — Rule 回答の元プロンプト（実験で効果が確認できたもの）。
-  `application/rule/prompts/adjudicator.md` の原文
 
 コードとテストだけで契約が伝わるなら spec を書かない。設計判断が変わったら、
 決定記録の中身を書き換えず、新しい番号で追加して古い方を `Superseded` にする。
@@ -126,7 +118,7 @@ branch 名（`d2-sync-cli`）、PR title、`docs/tasks.md` 自身。
 ### 成果物に doc への参照を書かない（厳守）
 
 **成果物は自己完結させる。** 対象は**あらゆる成果物**——コード / コメント / docstring / 設定ファイル /
-commit message / PR title / PR 本文 / `docs/tasks.md` / 新しく書く doc / ユーザーへの説明文。
+commit message / PR title / PR 本文 / Issue / 新しく書く doc / ユーザーへの説明文。
 
 #### 節番号は書かない
 
@@ -228,7 +220,7 @@ src/tribunal/
 
 Discord は FastAPI に mount できない Gateway（常時 websocket）方式に寄せる方針なので、`app_factory` ではなく独立 entrypoint / 別 service として扱う（対応自体を見送る可能性あり）。
 
-### 目標とする query pipeline（tasks J1）
+### 目標とする query pipeline
 
 この順序を崩さない。
 
@@ -243,7 +235,7 @@ Chat Event → Chat Adapter → GameResolver → Thread Context Resolution
 - **他人の著作物を push しない（厳守）。** 守るのは「GitHub に上げないこと」であって、**ローカルの作業ツリーに実体があるのは正常**（R2 へ upload する元が要る）。`games/<game_id>/` に metadata と bytes が同居し、`.gitignore` が `rule/` `strategy/` `raw/` を落とす。拡張子ではなく置き場所で無視するのは、変換後 Markdown や crawl 結果が拡張子で判別できないため。
 - **SoT は役割で分かれる。** document bytes = R2 / desired catalog = git repo（`games/<game_id>/meta.yaml` と Markdown の front matter）/ actual state = Vector Store の file attributes。**desired と actual を混ぜない**（`openai_file_id` や同期済み hash を `meta.yaml` に書き戻さない）。Vector Store は R2 から再生成可能な derived index。
 - **metadata の置き場所はファイル形式で決まる。** PDF / 画像（metadata を持てない）は `meta.yaml` に宣言、Markdown（持てる）は file 内の YAML front matter。content_type で分けないのは公式 FAQ / errata が PDF で配布されるため。
-- **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない（tasks D2）。
+- **ingest は sync CLI の reconcile。** desired と actual の diff を取って適用するだけなので冪等。実行漏れ・重複・順序に依存しない。
 - **Rule と Strategy を混ぜない。** Rule 回答に community / personal の情報をルール根拠として混ぜない。Rule を Strategy corpus から推測しない。
 - **検索結果 1 件で即答させない。** Rule 回答では **Rule Adjudicator Protocol** を prompt として明示するのが必須: 基本ルール / 用語定義 / setup / player count 差 / 例外 / examples / 関連 section を横断確認し、example を一般ルール化しない・推測を公式ルールとして断定しない。回答形式は【ルール引用】→【分析・検討】→【結論】の順で、**結論を先に書かせない**。原則日本語。
 - Strategy は唯一解がないので、Rule Adjudicator を拡張せず別の **Strategy Analyst Protocol**（前提 / 評価軸 / 複数候補 / trade-off を明示）を使う。

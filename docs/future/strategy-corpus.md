@@ -30,3 +30,27 @@ Rule 回答の根拠には使わない（決定 0004）。
 
 知識を入れるために fine-tuning しない。知識は RAG、fine-tuning は推論スタイルの調整に限る。
 最後の選択肢として扱う。
+
+## front matter の項目
+
+`meta.yaml` 側の項目（決定 0003）に加えて、crawl 由来のものを持つ。
+
+```yaml
+source_id:
+source_url:
+source_type:
+author:
+published_at:
+retrieved_at:
+```
+
+`cards` / `topics` / `mechanics` は metadata 化せず semantic search に任せる。
+
+## 受け入れ条件
+
+```text
+戦略質問に前提 / 評価軸 / 複数候補 / trade-off を明示して答える
+```
+
+※「Rule 回答に community / personal の情報が混入しない」は既に保証済み
+（`docs/specs/knowledge-boundary.md`）。

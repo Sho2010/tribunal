@@ -29,5 +29,5 @@ Markdown の front matter だけで、path を parse して `content_type` や `
 
 - 同じ `rule/` の下から粒度の違う `content_type` が出る。path を見て分類してはいけない
 - metadata の次元を足しても、ファイルを move せずに済む
-- `meta.yaml` を書かないと ingest 対象にならない。宣言を忘れると静かに漏れる
+- `meta.yaml` を書かないと ingest 対象にならない。宣言を忘れると静かに漏れる（規模が小さいうちは bot が答えないことで気づく。[0016](0016-automate-ingest-only-past-a-threshold.md)）
 - path の 3 区分を増やしたくなっても、それは metadata の次元追加ではない。3 つで足りなくなってから考える
