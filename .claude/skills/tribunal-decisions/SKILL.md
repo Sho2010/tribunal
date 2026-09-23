@@ -1,6 +1,6 @@
 ---
 name: tribunal-decisions
-description: tribunal の設計判断の理由を調べる。次を変更・追加するとき、および「なぜこうなっているのか」「これを変えてよいか」を問われたときに使う - protocol prompt (adjudicator.md / analyst.md)、intent 判定やタグ、retrieval や Vector Store や file_search、Rule と Strategy の分離、R2 / meta.yaml / games.yaml / catalog / ingest / sync、Slack adapter の event や ack、Sprites の service や task hold、eval や promptfoo、ディレクトリ構成や port の切り方。却下済みの案を再提案する前にも読む。実装が明らかな routine な変更には使わない。
+description: tribunal の設計判断の理由を調べる。次を変更・追加するとき、および「なぜこうなっているのか」「これを変えてよいか」を問われたときに使う - protocol prompt (adjudicator.md / analyst.md)、intent 判定やタグ、retrieval や Vector Store や file_search、Rule と Strategy の分離、R2 / meta.yaml / games.yaml / catalog / ingest / sync、画像 PDF の Markdown 化や OCR、Slack adapter の event や ack、Sprites の service や task hold、eval や promptfoo、ディレクトリ構成や port の切り方。却下済みの案を再提案する前にも読む。実装が明らかな routine な変更には使わない。
 ---
 
 # tribunal decisions
@@ -40,6 +40,7 @@ description: tribunal の設計判断の理由を調べる。次を変更・追�
 | 0014 | 2026-09-23 | Accepted | [eval runner を自作せず promptfoo を使う](references/0014-do-not-build-an-eval-runner.md) | eval の置き場所、harness、assertion の作り方を決めるとき |
 | 0015 | 2026-08-19 | Accepted | [Vector Store + File Search で始める](references/0015-use-vector-store-not-direct-file-input.md) | retrieval の経路そのもの、file_id の管理方法を変えるとき |
 | 0016 | 2026-09-23 | Accepted | [ingest の自動化は規模が閾値を超えてから](references/0016-automate-ingest-only-past-a-threshold.md) | sync CLI / gc / doctor を作るとき、差分判定の方法を決めるとき |
+| 0017 | 2026-09-23 | Accepted | [画像 PDF の変換はページ構造だけを保証し、中間生成物を temp に閉じる](references/0017-image-pdf-conversion-keeps-only-page-structure.md) | 画像 PDF / スキャン資料の変換、中間生成物の置き場所、変換結果の再処理や来歴を変えるとき |
 
 決定が変わったら、**理由を書き換えずに新しい番号で追加する。**
 古い方の Status を `Superseded` にし、両方から相互にリンクする。
