@@ -229,6 +229,9 @@ games/*/rule/
 games/*/strategy/
 games/*/raw/
 
+# 中間生成物の置き場。著作物の派生物（OCR 結果など）が入るので丸ごと落とす
+temp/
+
 *.pdf
 *.epub
 

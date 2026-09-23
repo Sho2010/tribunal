@@ -115,6 +115,7 @@ uv run pytest                # test
 - retrieval の実装、Vector Store、`file_search` の使い方を変える
 - Rule と Strategy の分け方、fallback、authority の扱いを変える
 - R2 / `meta.yaml` / `games.yaml` / ingest / sync を触る
+- 画像 PDF の Markdown 化（OCR / 変換 pipeline）を触る
 - Slack の event 種別、ack と生成の分離、返信先を変える
 - Sprites の service 構成、`task_hold.py` を触る
 - eval の置き場所や harness を決める

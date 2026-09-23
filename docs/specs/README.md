@@ -16,6 +16,7 @@
 | Rule / Strategy の境界 | [知識の境界](knowledge-boundary.md) |
 | 質問の振り分け | [intent routing](intent-routing.md) |
 | 常駐と wake | [runtime availability](runtime-availability.md) |
+| 画像 PDF の Markdown 化 | [image pdf to markdown](image-pdf-to-markdown.md) |
 
 ## 食い違っていたとき
 
