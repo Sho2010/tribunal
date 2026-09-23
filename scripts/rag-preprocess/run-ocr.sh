@@ -56,13 +56,13 @@ fi
 echo "==> OCR pages $PAGES of $TOTAL  $INPUT -> $OUTPUT" >&2
 
 # --remove-background / --clean-final は図版や網掛けを書き換えるので使わない
+# --deskew はページ画像を描き直すので、Docling がページ全面を 1 枚の図と判定し本文が落ちる
 ocrmypdf \
     --pages "$PAGES" \
     -l jpn+eng \
     --tesseract-oem 1 \
     --tesseract-pagesegmode 3 \
     --rotate-pages \
-    --deskew \
     --oversample 300 \
     --output-type pdf \
     --optimize 0 \
