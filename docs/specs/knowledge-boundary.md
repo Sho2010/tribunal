@@ -36,7 +36,9 @@ Rule Store 未設定で起動する
 
 - **`game_id` による絞り込みは、現在ユーザー経路では効いていない。**
   retriever は `game_id` を受け取ればフィルタするが、Slack からは渡していないため
-  Rule Store 全体を検索する。複数ゲームの資料を同じ Store に入れると混線しうる
+  Rule Store 全体を検索する。複数ゲームの資料を同じ Store に入れると混線しうる。
+  **これは意図した仕様ではなく未解決の欠落。** 解決には GameResolver が要る
+  （`docs/future/game-resolver.md`）
 - 回答内容の正しさ。protocol は手順を強制するが、結論の正しさは保証しない
 
 ## 関連
