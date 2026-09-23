@@ -1,6 +1,6 @@
 # ADR 0017: 画像 PDF の変換はページ構造だけを保証し、中間生成物を temp に閉じる
 
-- Status: Accepted
+- Status: Accepted（「再処理の単位はページ」だけ [0018](0018-image-pdf-pipeline-ocrmypdf-docling-then-llm.md) で Superseded）
 - Date: 2026-09-23
 
 ## Context
