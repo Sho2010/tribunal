@@ -58,10 +58,16 @@ echo "==> OCR pages $PAGES of $TOTAL  $INPUT -> $OUTPUT" >&2
 # --remove-background / --clean-final は図版や網掛けを書き換えるので使わない
 ocrmypdf \
     --pages "$PAGES" \
-    -l jpn+eng --tesseract-oem 1 --tesseract-pagesegmode 3 \
-    --rotate-pages --deskew --oversample 300 \
-    --output-type pdf --optimize 0 \
+    -l jpn+eng \
+    --tesseract-oem 1 \
+    --tesseract-pagesegmode 3 \
+    --rotate-pages \
+    --deskew \
+    --oversample 300 \
+    --output-type pdf \
+    --optimize 0 \
     --sidecar "$SIDECAR" \
-    "$INPUT" "$OUTPUT"
+    "$INPUT" \
+    "$OUTPUT"
 
 echo "    ok: $OUTPUT, $SIDECAR" >&2
