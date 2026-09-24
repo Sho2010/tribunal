@@ -1,7 +1,7 @@
 """games.yaml にあるゲームの Rule Store を単独で叩く動作確認スクリプト。
 
 usage:
-    uv run --env-file .env python scripts/tribunal_ask.py 'ノースフィヨルドの勝者を教えて' nusfjord
+    uv run --env-file .env python scripts/tribunal_ask.py 'ヌースフィヨルドの勝者を教えて' nusfjord
 """
 
 import sys
