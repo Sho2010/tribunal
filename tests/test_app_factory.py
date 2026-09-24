@@ -2,10 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tribunal.app_factory import create_app
+from tribunal.application.answer_service import AnswerService
 
 
-def test_health_reports_enabled_platforms(slack_env: None) -> None:
-    client = TestClient(create_app(["slack"], verify_credentials=False))
+def test_health_reports_enabled_platforms(slack_env: None, answer_service: AnswerService) -> None:
+    client = TestClient(
+        create_app(["slack"], verify_credentials=False, answer_service=answer_service)
+    )
 
     res = client.get("/")
 
@@ -18,8 +21,10 @@ def test_unknown_platform_raises() -> None:
         create_app(["discord"])
 
 
-def test_slack_adapter_mounts_events_endpoint(slack_env: None) -> None:
-    app = create_app(["slack"], verify_credentials=False)
+def test_slack_adapter_mounts_events_endpoint(
+    slack_env: None, answer_service: AnswerService
+) -> None:
+    app = create_app(["slack"], verify_credentials=False, answer_service=answer_service)
 
     routes = {getattr(r, "path", None) for r in app.routes}
 

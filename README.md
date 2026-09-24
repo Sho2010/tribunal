@@ -23,9 +23,21 @@ Slack からボードゲームのルール / 戦略を質問できる RAG chatbo
 | `SLACK_BOT_TOKEN` | (required) Slack App の Bot User OAuth Token | `xoxb-your-bot-token` |
 | `SLACK_SIGNING_SECRET` | (required) Slack リクエストの署名検証 | `your-signing-secret` |
 | `OPENAI_API_KEY` | (required) OpenAI API key | `sk-your-api-key` |
-| `TRIBUNAL_RULE_VECTOR_STORE_ID` | (required) Rule Store の Vector Store ID | `vs_your-vector-store-id` |
-| `TRIBUNAL_STRATEGY_VECTOR_STORE_ID` | (optional) Strategy Store の Vector Store ID。未設定なら Strategy 側の retriever を mount しない（Rule 側へ fallback はしない） | `vs_your-strategy-store-id` |
 | `TRIBUNAL_MODEL` | (optional) 回答生成に使うモデル。省略時は `gpt-5` | `gpt-5` |
+
+Vector Store ID は env ではなく `games/games.yaml` の各ゲームの `stores` に書く。
+
+```yaml
+- id: nusfjord
+  stores:
+    rule: vs_xxx       # 空のゲームには回答しない
+    strategy: ""       # 空なら戦略の質問に「未整備」と返す（rule Store では代替しない）
+```
+
+`rule` / `strategy` の両キーが必須。Store 未作成は空文字で書く（キー省略・`null` は読み込み時にエラー）。
+
+登録ゲーム（rule が設定されたゲーム）が 1 つならそのゲームとして答える。
+複数あるときは、ゲームを特定する手段がまだ無いため回答できない。
 
 ### PDFの下処理（`scripts/rag-preprocess/`）:
 

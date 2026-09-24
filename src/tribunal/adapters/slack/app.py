@@ -8,14 +8,8 @@ from fastapi import FastAPI, Request, Response
 from slack_bolt import Ack, App, Say
 from slack_bolt.adapter.fastapi import SlackRequestHandler
 
-from tribunal.application.answer_service import AnswerService, StrategyUnavailable
-from tribunal.application.rule.protocol import adjudicator_prompt
-from tribunal.application.strategy.protocol import analyst_prompt
+from tribunal.application.answer_service import AnswerService, Unanswerable
 from tribunal.domain.answer import Answer
-from tribunal.infra.openai.file_search_retriever import (
-    STRATEGY_STORE_ENV,
-    FileSearchRetriever,
-)
 from tribunal.infra.sprites import task_hold
 
 logger = logging.getLogger(__name__)
@@ -60,8 +54,8 @@ def _build_bolt_app(answer_service: AnswerService, *, verify_token: bool = True)
             answer = answer_service.ask(question)
             logger.info("answer generated: %d chars", len(answer.text))
             say(text=_format(answer), thread_ts=thread_ts)
-        except StrategyUnavailable as exc:
-            logger.info("strategy unavailable: %r", question)
+        except Unanswerable as exc:
+            logger.info("%s: %r", type(exc).__name__, question)
             say(text=str(exc), thread_ts=thread_ts)
         except Exception:
             logger.exception("failed to respond: %r", question)
@@ -83,28 +77,15 @@ def _format(answer: Answer) -> str:
     return f"{answer.text}\n\n*出典*\n{citations}"
 
 
-def _default_service() -> AnswerService:
-    """env から AnswerService を組み立てる。"""
-    strategy = None
-    # Strategy Store は未整備でよい。未設定なら strategy 判定時に StrategyUnavailable。
-    if os.environ.get(STRATEGY_STORE_ENV):
-        strategy = FileSearchRetriever.for_strategy(analyst_prompt())
-    return AnswerService(
-        FileSearchRetriever.for_rule(adjudicator_prompt()),
-        strategy_retriever=strategy,
-    )
-
-
 def register(
     app: FastAPI,
+    answer_service: AnswerService,
     *,
     verify_token: bool = True,
-    answer_service: AnswerService | None = None,
 ) -> None:
     """FastAPI に POST /slack/events を mount する。"""
-    # env を読むのはここから。import しただけで SLACK_* / OPENAI_* を要求しないため。
-    service = answer_service or _default_service()
-    handler = SlackRequestHandler(_build_bolt_app(service, verify_token=verify_token))
+    # env を読むのはここから。import しただけで SLACK_* を要求しないため。
+    handler = SlackRequestHandler(_build_bolt_app(answer_service, verify_token=verify_token))
 
     @app.post("/slack/events")
     async def slack_events(req: Request) -> Response:

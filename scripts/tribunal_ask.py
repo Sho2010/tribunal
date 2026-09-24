@@ -1,28 +1,32 @@
-"""Rule Store を単独で叩く動作確認スクリプト。
+"""games.yaml にあるゲームの Rule Store を単独で叩く動作確認スクリプト。
 
 usage:
-    uv run --env-file .env python tribunal_ask.py 'ノースフィヨルドの勝者を教えて' [game_id]
+    uv run --env-file .env python scripts/tribunal_ask.py 'ヌースフィヨルドの勝者を教えて' nusfjord
 """
 
 import sys
 
 from tribunal.application.rule.protocol import adjudicator_prompt
 from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
+from tribunal.knowledge.games import load_game_stores
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
         return 2
 
-    question = sys.argv[1]
-    game_id = sys.argv[2] if len(sys.argv) > 2 else None
+    question, game_id = sys.argv[1], sys.argv[2]
+    store_id = load_game_stores()[game_id].rule
+    if not store_id:
+        print(f"{game_id}: rule store が未設定", file=sys.stderr)
+        return 1
 
-    retriever = FileSearchRetriever.for_rule(adjudicator_prompt())
-    print(f"question: {question!r}  game_id: {game_id!r}")
+    retriever = FileSearchRetriever(adjudicator_prompt())
+    print(f"question: {question!r}  game_id: {game_id!r}  store: {store_id}")
     print("=" * 60)
 
-    answer = retriever.answer(question, game_id=game_id)
+    answer = retriever.answer(question, vector_store_id=store_id)
 
     print(answer.text)
     print("-" * 60)

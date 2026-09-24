@@ -1,5 +1,8 @@
 version: 1
 
+# stores: 区分（rule / strategy）ごとの Vector Store ID。両方のキーが必須で、null は不可。
+# 空文字は Store 未作成。rule が空のゲームには回答しない。strategy が空なら戦略の質問に「未整備」と返す。
+
 games:
   - id: nusfjord
     name: Nusfjord
@@ -15,6 +18,9 @@ games:
       - Elder
       - 株
       - Share
+    stores:
+      rule: ""
+      strategy: ""
     editions:
       - id: base
         name: Nusfjord
@@ -43,6 +49,9 @@ games:
       - Harvest
       - 葦
       - 家畜
+    stores:
+      rule: ""
+      strategy: ""
     editions:
       - id: revised
         name: Agricola (Revised Edition)
@@ -70,6 +79,9 @@ games:
       - ターミナル衝突
       - terminal collision
       - Kingdom card
+    stores:
+      rule: ""
+      strategy: ""
     editions:
       - id: second
         name: Dominion (Second Edition)
@@ -89,6 +101,9 @@ games:
       - エグザンプル
     identifying_terms:
       - 超エキサイティング
+    stores:
+      rule: ""
+      strategy: ""
     editions:
       - id: base
         name: Example

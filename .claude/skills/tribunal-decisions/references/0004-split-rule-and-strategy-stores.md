@@ -1,6 +1,6 @@
 # ADR 0004: Rule corpus と Strategy corpus を分離する
 
-- Status: Accepted
+- Status: Accepted（Store ID を env で渡す部分だけ [0020](0020-per-game-stores-in-games-yaml.md) で Superseded）
 - Date: 2026-08-19
 
 ## Context

@@ -1,7 +1,7 @@
 # Strategy corpus
 
 Strategy 回答の資料をどう集め、どう持つか。**未実装。**
-Strategy Store 自体は動くが（`TRIBUNAL_STRATEGY_VECTOR_STORE_ID` があれば有効）、資料がまだ無い。
+Strategy Store 自体は動くが（`games.yaml` のゲームに `stores.strategy` があれば有効）、資料がまだ無い。
 
 ## document の形式
 

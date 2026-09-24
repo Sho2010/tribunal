@@ -198,7 +198,7 @@ commit message / PR title / PR 本文 / Issue / 新しく書く doc / ユーザ�
 
 ```text
 games/                # <game_id>/{rule/, strategy/, raw/} は実在
-  games.yaml          #   実在（ただし読むコードはまだ無い）
+  games.yaml          #   実在。読んでいるのは stores だけ
   schema/             #   (未)
   <game_id>/meta.yaml #   (未)
 evals/                # (未) promptfooconfig.yaml, cases/, provider.py
@@ -208,7 +208,7 @@ src/tribunal/
   application/        # answer_service.py, ports.py, pipeline/, rule/, strategy/
   domain/
   infra/              # outbound: openai/, sprites/。r2/ は (未)
-  knowledge/          # (未) meta.yaml 読み込み / front matter / reconcile
+  knowledge/          # games.yaml の stores 読み込み。meta.yaml / front matter / reconcile は (未)
   cli/                # (未)
 ```
 
@@ -224,14 +224,15 @@ src/tribunal/
 
 現在あるモジュール:
 
-- `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`）。
-- `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。
-- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy は `TRIBUNAL_STRATEGY_VECTOR_STORE_ID` が設定されているときだけ有効。
+- `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`, `GameStores`）。
+- `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。ゲームを決め → intent を判定し → そのゲームのその区分の Store ID を retriever に渡す。`game_id` が無いときは Rule Store を持つゲームが 1 つならそれ、複数なら `GameUnresolved`（全ゲームを横断しない）。回答せずに理由を返す例外は `Unanswerable` の派生（`StrategyUnavailable` / `GameUnresolved`）。
+- `src/tribunal/knowledge/games.py` — `games/games.yaml` の各ゲームの `stores`（`rule` / `strategy` → Vector Store ID）を読む。両キー必須、Store 未作成は空文字。キー欠落・`null`・それ以外の区分キーはエラー（キー欠落は将来「その区分を持たない」に使うため、空文字と区別する）。Store ID は env では持たない。
+- `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy はそのゲームに `stores.strategy` があるときだけ有効。
 - `src/tribunal/application/pipeline/intent.py` — `TagIntentClassifier` → `KeywordIntentClassifier` を `IntentClassifierChain` で繋ぎ、どちらも決められなければ Rule に倒す。明示タグ（`ルール:` / `戦略:` / `[ルール]` / `[strategy]`）は質問文から除去してから retriever へ渡す。タグなしで処理したときは、どちらとして答えたかを回答末尾に添える。
 - `src/tribunal/infra/sprites/task_hold.py` — Sprites は inbound request が 30 秒ほど途切れると pause し、生成中の処理も一緒に凍る。Tasks API に task を登録している間だけ pause しないので、ack の時点で hold を取り、回答を返し終えたら解放する。Sprites 外では socket が無く、hold なしで動く。
-- `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。store 非依存で、`for_rule()` / `for_strategy()` が読む env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）と注入する prompt だけが違う。**片方が未設定のとき他方へ fallback しない**（trust boundary のため）。
+- `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。生成時に protocol prompt、呼び出しごとに Store ID を受け取る。Rule 用と Strategy 用の 2 インスタンスを作る。**ある区分の Store が未設定のとき、別区分・別ゲームの Store へ fallback しない**（trust boundary のため）。
 - `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。
-- `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
+- `src/tribunal/app_factory.py` — `create_app(platforms)` が合成の中心。games.yaml を読んで `AnswerService` を組み立て、adapter の `register(app, answer_service)` に渡す（adapter は `knowledge/` を import できないため）。platform ごとに adapter を **遅延 import** して mount するので、有効化していない platform の依存・env を要求しない。新しい platform を足すならここに分岐を追加する。
 - `src/tribunal/entrypoints/<platform>.py` — uvicorn の起動対象。`.env` 読み込み → `create_app([...])`。`src/tribunal/main.py` は slack entrypoint を re-export する後方互換シム。
 
 Discord は FastAPI に mount できない Gateway（常時 websocket）方式に寄せる方針なので、`app_factory` ではなく独立 entrypoint / 別 service として扱う（対応自体を見送る可能性あり）。
