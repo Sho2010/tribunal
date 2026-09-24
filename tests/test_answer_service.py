@@ -1,10 +1,19 @@
 import pytest
 
-from tribunal.application.answer_service import AnswerService, GameUnresolved, StrategyUnavailable
+from tribunal.application.answer_service import AnswerService
+from tribunal.application.unanswerable import GameUnresolved, RuleUnavailable, StrategyUnavailable
 from tribunal.domain.answer import Answer, Source
-from tribunal.domain.game import GameStores
+from tribunal.domain.game import Game, GameStores
 
-ONE_GAME = {"catan": GameStores(rule="vs_catan_rule", strategy="vs_catan_strategy")}
+
+def _game(rule: str = "vs_catan_rule", strategy: str = "vs_catan_strategy") -> Game:
+    return Game(
+        id="catan",
+        name="Catan",
+        aliases=(),
+        identifying_terms=(),
+        stores=GameStores(rule=rule, strategy=strategy),
+    )
 
 
 class RecordingRetriever:
@@ -18,15 +27,32 @@ class RecordingRetriever:
         return Answer(text=self.text, sources=self.sources)
 
 
+class FixedResolver:
+    """常に同じゲームを返す。game_id と質問文は記録するだけ。"""
+
+    def __init__(self, game: Game) -> None:
+        self.game = game
+        self.calls: list[tuple[str, str | None]] = []
+
+    def resolve(self, question: str, *, game_id: str | None = None) -> Game:
+        self.calls.append((question, game_id))
+        return self.game
+
+
+class UnresolvedResolver:
+    def resolve(self, question: str, *, game_id: str | None = None) -> Game:
+        raise GameUnresolved("unresolved")
+
+
 def _service(
     rule: RecordingRetriever | None = None,
     strategy: RecordingRetriever | None = None,
-    stores: dict[str, GameStores] | None = None,
+    game: Game | None = None,
 ) -> AnswerService:
     return AnswerService(
         rule or RecordingRetriever("rule"),
         strategy or RecordingRetriever("strategy"),
-        stores=ONE_GAME if stores is None else stores,
+        resolver=FixedResolver(game or _game()),
     )
 
 
@@ -88,78 +114,41 @@ def test_ambiguous_falls_back_to_rule() -> None:
 def test_strategy_without_store_raises_instead_of_answering_from_rule() -> None:
     """Store 未整備時に rule 資料で戦略を語らない。"""
     rule, strategy = RecordingRetriever("rule"), RecordingRetriever("strategy")
-    stores = {"catan": GameStores(rule="vs_catan_rule", strategy="")}
 
     with pytest.raises(StrategyUnavailable):
-        _service(rule, strategy, stores).ask("戦略: 序盤のおすすめ")
+        _service(rule, strategy, _game(strategy="")).ask("戦略: 序盤のおすすめ")
 
     assert rule.calls == []
     assert strategy.calls == []
 
 
-def test_game_id_selects_that_games_store() -> None:
+def test_game_id_and_question_are_passed_to_the_resolver() -> None:
+    resolver = FixedResolver(_game())
+    service = AnswerService(
+        RecordingRetriever("rule"), RecordingRetriever("strategy"), resolver=resolver
+    )
+
+    service.ask("ルール: 収穫は?", game_id="catan")
+
+    assert resolver.calls == [("ルール: 収穫は?", "catan")]
+
+
+def test_unresolved_game_is_not_answered() -> None:
     rule = RecordingRetriever("rule")
-    stores = {
-        "catan": GameStores(rule="vs_catan_rule", strategy=""),
-        "agricola": GameStores(rule="vs_agricola_rule", strategy=""),
-    }
-
-    _service(rule, stores=stores).ask("ルール: 収穫は?", game_id="agricola")
-
-    assert rule.calls == [("収穫は?", "vs_agricola_rule")]
-
-
-def test_multiple_games_without_game_id_are_not_searched_together() -> None:
-    rule = RecordingRetriever("rule")
-    stores = {
-        "catan": GameStores(rule="vs_catan_rule", strategy=""),
-        "agricola": GameStores(rule="vs_agricola_rule", strategy=""),
-    }
+    service = AnswerService(rule, RecordingRetriever("strategy"), resolver=UnresolvedResolver())
 
     with pytest.raises(GameUnresolved):
-        _service(rule, stores=stores).ask("ルール: 収穫は?")
+        service.ask("ルール: 収穫は?")
 
     assert rule.calls == []
 
 
-def test_unknown_game_id_is_unresolved() -> None:
-    with pytest.raises(GameUnresolved):
-        _service().ask("ルール: 収穫は?", game_id="agricola")
-
-
-def test_game_without_rule_store_is_not_a_candidate() -> None:
-    """rule が未設定のゲームは数えないので、残る 1 ゲームに解決される。"""
-    rule = RecordingRetriever("rule")
-    stores = {
-        "catan": GameStores(rule="vs_catan_rule", strategy=""),
-        "agricola": GameStores(rule="", strategy="vs_agricola_strategy"),
-    }
-
-    _service(rule, stores=stores).ask("ルール: 盗賊は?")
-
-    assert rule.calls == [("盗賊は?", "vs_catan_rule")]
-
-
-def test_no_game_with_rule_store_is_unresolved_at_ask_time() -> None:
+def test_game_without_rule_store_is_not_answered_even_for_strategy() -> None:
     """Strategy Store があっても Rule Store の代わりにしない。"""
     rule, strategy = RecordingRetriever("rule"), RecordingRetriever("strategy")
-    service = _service(rule, strategy, {"catan": GameStores(rule="", strategy="vs_strategy")})
 
-    with pytest.raises(GameUnresolved):
-        service.ask("戦略: 序盤は?")
+    with pytest.raises(RuleUnavailable, match="Catan のルール資料"):
+        _service(rule, strategy, _game(rule="")).ask("戦略: 序盤は?")
 
     assert rule.calls == []
-    assert strategy.calls == []
-
-
-def test_game_id_without_rule_store_is_unresolved() -> None:
-    strategy = RecordingRetriever("strategy")
-    stores = {
-        "catan": GameStores(rule="vs_catan_rule", strategy=""),
-        "agricola": GameStores(rule="", strategy="vs_agricola_strategy"),
-    }
-
-    with pytest.raises(GameUnresolved):
-        _service(strategy=strategy, stores=stores).ask("戦略: 序盤は?", game_id="agricola")
-
     assert strategy.calls == []

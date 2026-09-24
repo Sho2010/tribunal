@@ -7,3 +7,14 @@ class GameStores:
 
     rule: str
     strategy: str
+
+
+@dataclass(frozen=True)
+class Game:
+    """catalog に宣言されたゲーム。"""
+
+    id: str
+    name: str
+    aliases: tuple[str, ...]
+    identifying_terms: tuple[str, ...]
+    stores: GameStores

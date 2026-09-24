@@ -3,10 +3,11 @@ import logging
 from fastapi import FastAPI
 
 from tribunal.application.answer_service import AnswerService
+from tribunal.application.pipeline.game import CatalogGameResolver
 from tribunal.application.rule.protocol import adjudicator_prompt
 from tribunal.application.strategy.protocol import analyst_prompt
 from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
-from tribunal.knowledge.games import load_game_stores
+from tribunal.knowledge.games import load_games
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +47,9 @@ def create_app(
 
 
 def _default_service() -> AnswerService:
-    """games.yaml の Store ID から AnswerService を組み立てる。"""
+    """games.yaml のゲーム catalog から AnswerService を組み立てる。"""
     return AnswerService(
         FileSearchRetriever(adjudicator_prompt()),
         FileSearchRetriever(analyst_prompt()),
-        stores=load_game_stores(),
+        resolver=CatalogGameResolver(load_games()),
     )

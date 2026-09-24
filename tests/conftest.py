@@ -2,7 +2,7 @@ import pytest
 
 from tribunal.application.answer_service import AnswerService
 from tribunal.domain.answer import Answer
-from tribunal.domain.game import GameStores
+from tribunal.domain.game import Game, GameStores
 
 
 @pytest.fixture
@@ -22,11 +22,18 @@ class _StubRetriever:
         return Answer(text="stub")
 
 
+class _StubResolver:
+    def resolve(self, question: str, *, game_id: str | None = None) -> Game:
+        return Game(
+            id="catan",
+            name="Catan",
+            aliases=(),
+            identifying_terms=(),
+            stores=GameStores(rule="vs_test", strategy=""),
+        )
+
+
 @pytest.fixture
 def answer_service() -> AnswerService:
     """OpenAI を呼ばない AnswerService。"""
-    return AnswerService(
-        _StubRetriever(),
-        _StubRetriever(),
-        stores={"catan": GameStores(rule="vs_test", strategy="")},
-    )
+    return AnswerService(_StubRetriever(), _StubRetriever(), resolver=_StubResolver())
