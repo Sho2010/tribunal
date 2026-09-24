@@ -8,7 +8,8 @@ from fastapi import FastAPI, Request, Response
 from slack_bolt import Ack, App, Say
 from slack_bolt.adapter.fastapi import SlackRequestHandler
 
-from tribunal.application.answer_service import AnswerService, Unanswerable
+from tribunal.application.answer_service import AnswerService
+from tribunal.application.unanswerable import Unanswerable
 from tribunal.domain.answer import Answer
 from tribunal.infra.sprites import task_hold
 

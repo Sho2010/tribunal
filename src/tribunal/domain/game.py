@@ -10,9 +10,11 @@ class GameStores:
 
 
 @dataclass(frozen=True)
-class GameIdentity:
-    """質問からゲームを特定するための名前と語彙。"""
+class Game:
+    """catalog に宣言されたゲーム。"""
 
+    id: str
     name: str
     aliases: tuple[str, ...]
     identifying_terms: tuple[str, ...]
+    stores: GameStores

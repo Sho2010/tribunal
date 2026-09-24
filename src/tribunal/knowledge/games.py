@@ -3,33 +3,29 @@ from typing import Any
 
 import yaml
 
-from tribunal.domain.game import GameIdentity, GameStores
+from tribunal.domain.game import Game, GameStores
 
 DEFAULT_GAMES_FILE = Path("games/games.yaml")
 
 STORE_KINDS = frozenset({"rule", "strategy"})
 
 
-def load_game_stores(path: Path = DEFAULT_GAMES_FILE) -> dict[str, GameStores]:
-    """games.yaml から game_id ごとの Store ID を読む。"""
+def load_games(path: Path = DEFAULT_GAMES_FILE) -> dict[str, Game]:
+    """games.yaml から game_id ごとの Game を読む。"""
     catalog = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return {game["id"]: _stores_of(game) for game in catalog["games"]}
+    return {game["id"]: _game_of(game) for game in catalog["games"]}
 
 
-def load_game_identities(path: Path = DEFAULT_GAMES_FILE) -> dict[str, GameIdentity]:
-    """games.yaml から game_id ごとの名前 / aliases / identifying_terms を読む。"""
-    catalog = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return {game["id"]: _identity_of(game) for game in catalog["games"]}
-
-
-def _identity_of(game: dict[str, Any]) -> GameIdentity:
+def _game_of(game: dict[str, Any]) -> Game:
     name = game.get("name")
     if not isinstance(name, str) or not name:
         raise ValueError(f"{game['id']}: name must be a non-empty string")
-    return GameIdentity(
+    return Game(
+        id=game["id"],
         name=name,
         aliases=_strings_of(game, "aliases"),
         identifying_terms=_strings_of(game, "identifying_terms"),
+        stores=_stores_of(game),
     )
 
 

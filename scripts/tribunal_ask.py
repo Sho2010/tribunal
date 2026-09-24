@@ -8,7 +8,7 @@ import sys
 
 from tribunal.application.rule.protocol import adjudicator_prompt
 from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
-from tribunal.knowledge.games import load_game_stores
+from tribunal.knowledge.games import load_games
 
 
 def main() -> int:
@@ -17,7 +17,7 @@ def main() -> int:
         return 2
 
     question, game_id = sys.argv[1], sys.argv[2]
-    store_id = load_game_stores()[game_id].rule
+    store_id = load_games()[game_id].stores.rule
     if not store_id:
         print(f"{game_id}: rule store が未設定", file=sys.stderr)
         return 1
