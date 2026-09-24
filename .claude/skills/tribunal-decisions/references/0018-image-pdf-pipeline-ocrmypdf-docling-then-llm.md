@@ -1,6 +1,6 @@
 # ADR 0018: 画像 PDF の変換は OCRmyPDF → Docling を土台にし、問題ページだけ LLM で照合する
 
-- Status: Accepted
+- Status: Accepted（「問題ページだけ LLM で照合する」と「再処理の単位は決めない」は [0019](0019-image-pdf-reconcile-scope-and-assembly.md) で Superseded）
 - Date: 2026-09-24
 - Supersedes: [0017](0017-image-pdf-conversion-keeps-only-page-structure.md) の「再処理の単位はページ」
 
