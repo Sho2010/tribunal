@@ -1,7 +1,7 @@
 version: 1
 
-# stores: 区分（rule / strategy）ごとの Vector Store ID。空文字は未設定。
-# rule が空のゲームには回答しない。strategy が空なら戦略の質問に「未整備」と返す。
+# stores: 区分（rule / strategy）ごとの Vector Store ID。両方のキーが必須で、null は不可。
+# 空文字は Store 未作成。rule が空のゲームには回答しない。strategy が空なら戦略の質問に「未整備」と返す。
 
 games:
   - id: nusfjord

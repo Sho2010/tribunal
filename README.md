@@ -34,6 +34,8 @@ Vector Store ID は env ではなく `games/games.yaml` の各ゲームの `stor
     strategy: ""       # 空なら戦略の質問に「未整備」と返す（rule Store では代替しない）
 ```
 
+`rule` / `strategy` の両キーが必須。Store 未作成は空文字で書く（キー省略・`null` は読み込み時にエラー）。
+
 登録ゲーム（rule が設定されたゲーム）が 1 つならそのゲームとして答える。
 複数あるときは、ゲームを特定する手段がまだ無いため回答できない。
 

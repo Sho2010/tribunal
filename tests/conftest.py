@@ -26,5 +26,7 @@ class _StubRetriever:
 def answer_service() -> AnswerService:
     """OpenAI を呼ばない AnswerService。"""
     return AnswerService(
-        _StubRetriever(), _StubRetriever(), stores={"catan": GameStores(rule="vs_test")}
+        _StubRetriever(),
+        _StubRetriever(),
+        stores={"catan": GameStores(rule="vs_test", strategy="")},
     )

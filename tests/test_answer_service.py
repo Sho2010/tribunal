@@ -88,7 +88,7 @@ def test_ambiguous_falls_back_to_rule() -> None:
 def test_strategy_without_store_raises_instead_of_answering_from_rule() -> None:
     """Store 未整備時に rule 資料で戦略を語らない。"""
     rule, strategy = RecordingRetriever("rule"), RecordingRetriever("strategy")
-    stores = {"catan": GameStores(rule="vs_catan_rule")}
+    stores = {"catan": GameStores(rule="vs_catan_rule", strategy="")}
 
     with pytest.raises(StrategyUnavailable):
         _service(rule, strategy, stores).ask("戦略: 序盤のおすすめ")
@@ -100,8 +100,8 @@ def test_strategy_without_store_raises_instead_of_answering_from_rule() -> None:
 def test_game_id_selects_that_games_store() -> None:
     rule = RecordingRetriever("rule")
     stores = {
-        "catan": GameStores(rule="vs_catan_rule"),
-        "agricola": GameStores(rule="vs_agricola_rule"),
+        "catan": GameStores(rule="vs_catan_rule", strategy=""),
+        "agricola": GameStores(rule="vs_agricola_rule", strategy=""),
     }
 
     _service(rule, stores=stores).ask("ルール: 収穫は?", game_id="agricola")
@@ -112,8 +112,8 @@ def test_game_id_selects_that_games_store() -> None:
 def test_multiple_games_without_game_id_are_not_searched_together() -> None:
     rule = RecordingRetriever("rule")
     stores = {
-        "catan": GameStores(rule="vs_catan_rule"),
-        "agricola": GameStores(rule="vs_agricola_rule"),
+        "catan": GameStores(rule="vs_catan_rule", strategy=""),
+        "agricola": GameStores(rule="vs_agricola_rule", strategy=""),
     }
 
     with pytest.raises(GameUnresolved):
@@ -131,8 +131,8 @@ def test_game_without_rule_store_is_not_a_candidate() -> None:
     """rule が未設定のゲームは数えないので、残る 1 ゲームに解決される。"""
     rule = RecordingRetriever("rule")
     stores = {
-        "catan": GameStores(rule="vs_catan_rule"),
-        "agricola": GameStores(strategy="vs_agricola_strategy"),
+        "catan": GameStores(rule="vs_catan_rule", strategy=""),
+        "agricola": GameStores(rule="", strategy="vs_agricola_strategy"),
     }
 
     _service(rule, stores=stores).ask("ルール: 盗賊は?")
@@ -143,4 +143,4 @@ def test_game_without_rule_store_is_not_a_candidate() -> None:
 def test_no_rule_store_fails_at_construction() -> None:
     """Strategy Store があっても Rule Store の代わりにしない。"""
     with pytest.raises(ValueError):
-        _service(stores={"catan": GameStores(strategy="vs_catan_strategy")})
+        _service(stores={"catan": GameStores(rule="", strategy="vs_catan_strategy")})

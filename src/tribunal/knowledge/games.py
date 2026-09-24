@@ -17,13 +17,14 @@ def load_game_stores(path: Path = DEFAULT_GAMES_FILE) -> dict[str, GameStores]:
 
 
 def _stores_of(game: dict[str, Any]) -> GameStores:
-    stores = game.get("stores", {})
+    stores = game.get("stores")
     if not isinstance(stores, dict):
         raise ValueError(f"{game['id']}: stores must be a mapping")
-    unknown = set(stores) - STORE_KINDS
-    if unknown:
-        raise ValueError(f"{game['id']}: unknown store kind: {sorted(unknown)}")
+    if set(stores) != STORE_KINDS:
+        raise ValueError(
+            f"{game['id']}: stores must have exactly {sorted(STORE_KINDS)}, got {sorted(stores)}"
+        )
     for kind, store_id in stores.items():
         if not isinstance(store_id, str):
             raise ValueError(f"{game['id']}: stores.{kind} must be a string")
-    return GameStores(**stores)
+    return GameStores(rule=stores["rule"], strategy=stores["strategy"])

@@ -28,7 +28,11 @@ Slack から `game_id` を渡していないので、実際には全ゲームの
 - 宣言は `games/games.yaml` の各ゲームの `stores`。**区分名をキーにした map** にし、
   `rule_store:` / `strategy_store:` のような固定項目にしない。区分をゲームごとに持たせるときに
   キーが増えるだけで済む
-- 値は Store ID 1 つ。未設定は空文字（`null` は読み込み時にエラー）
+- 値は Store ID 1 つ。**キーが無い / `null` / 空文字を別の状態として扱う**
+  - 空文字: 区分はあるが Store が未作成（placeholder）
+  - キーが無い: そのゲームがその区分を持たない。区分が固定の今は使わず、読み込み時にエラー
+    （`rule` / `strategy` とも必須）。区分をゲームごとに持たせるときにこの意味を与える
+  - `null`: 使わない。読み込み時にエラー
 - キーは今は `rule` / `strategy` だけを許し、それ以外は読み込み時にエラーにする
 - Store ID の env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）は廃止する
 - 対象ゲームは、`game_id` が渡されればそれ、無ければ Rule Store を持つゲームが 1 つのときだけそれに決める。
