@@ -77,9 +77,9 @@ games:
       - Estate
       - 圧縮
       - trash
-      - ターミナル衝突
       - terminal collision
       - Kingdom card
+      - 王国カード
     stores:
       rule: ""
       strategy: ""
@@ -95,6 +95,20 @@ games:
         aliases:
           - 第1版
           - "1st"
+
+  - id: dewan
+    name: Dewan
+    aliases:
+      - デワン
+    identifying_terms:
+      - 部族ボード
+      - 物語タイル
+      - 初期野営地
+      - 湖上の村
+      - ベリートークン
+    stores:
+      rule: "vs_6ab5a2f3e8bc8191b85c5559dba6f2ca"
+      strategy: ""
 
   - id: example
     name: Example
