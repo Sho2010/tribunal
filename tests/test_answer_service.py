@@ -140,10 +140,16 @@ def test_game_without_rule_store_is_not_a_candidate() -> None:
     assert rule.calls == [("盗賊は?", "vs_catan_rule")]
 
 
-def test_no_rule_store_fails_at_construction() -> None:
+def test_no_game_with_rule_store_is_unresolved_at_ask_time() -> None:
     """Strategy Store があっても Rule Store の代わりにしない。"""
-    with pytest.raises(ValueError):
-        _service(stores={"catan": GameStores(rule="", strategy="vs_catan_strategy")})
+    rule, strategy = RecordingRetriever("rule"), RecordingRetriever("strategy")
+    service = _service(rule, strategy, {"catan": GameStores(rule="", strategy="vs_strategy")})
+
+    with pytest.raises(GameUnresolved):
+        service.ask("戦略: 序盤は?")
+
+    assert rule.calls == []
+    assert strategy.calls == []
 
 
 def test_game_id_without_rule_store_is_unresolved() -> None:

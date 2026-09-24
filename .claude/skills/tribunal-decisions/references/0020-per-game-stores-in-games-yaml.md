@@ -37,7 +37,10 @@ Slack から `game_id` を渡していないので、実際には全ゲームの
 - Store ID の env（`TRIBUNAL_RULE_VECTOR_STORE_ID` / `TRIBUNAL_STRATEGY_VECTOR_STORE_ID`）は廃止する
 - 対象ゲームは、`game_id` が渡されればそれ、無ければ Rule Store を持つゲームが 1 つのときだけそれに決める。
   決められなければ回答しない。**複数ゲームの Store をまとめて検索しない**
-- Rule Store の無いゲームは回答の対象にしない。対象が 1 つも無ければ起動時に落とす
+- Rule Store の無いゲームは回答の対象にしない。対象が 1 つも無くても起動は止めず、質問時に「特定できない」と返す。
+  起動時に落としていたのは共通の Store が 1 つで、それが無ければどの質問にも答えられなかったため。
+  ゲームごとの Store では「rule を持つゲームが 0 個」は答えられない状態の 1 つにすぎない。
+  起動時に OpenAI へ Store の実在を問い合わせることもしない（起動が外部サービスに依存し、実行中に消えた Store は防げない）
 - ある区分の Store が無いとき、別の区分・別のゲームの Store で代替しない（[0004](0004-split-rule-and-strategy-stores.md) の fallback 禁止を、ゲーム単位に広げたもの）
 
 ## Consequences

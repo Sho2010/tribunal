@@ -44,8 +44,6 @@ class AnswerService:
         stores: Mapping[str, GameStores],
         classifier: IntentClassifier | None = None,
     ) -> None:
-        if not any(s.rule for s in stores.values()):
-            raise ValueError("no game has a rule store")
         self._stores = stores
         self._rule_retriever = rule_retriever
         self._strategy_retriever = strategy_retriever

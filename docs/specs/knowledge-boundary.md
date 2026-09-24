@@ -11,7 +11,7 @@ Rule 回答に非公式な情報が混ざらないことを保証する。
 - Rule 回答の根拠は **そのゲームの Rule Store のみ**。Strategy Store を根拠にしない
 - Strategy 回答は、戦略資料を公式ルールとして提示しない
 - **ある区分の Store が未設定のとき、別の区分や別のゲームの Store で代替しない**
-  - Rule Store が未設定のゲーム → 回答の対象にしない。対象が 1 つも無ければ起動時に落ちる
+  - Rule Store が未設定のゲーム → 回答の対象にしない（Strategy Store があっても）
   - Strategy Store が未設定のゲーム → strategy 質問は retriever を呼ばずに「答えられない」と返る
 - **複数ゲームの Store をまとめて検索しない。** 対象ゲームを 1 つに決められなければ「答えられない」と返る
 - Rule 回答の根拠に使える authority は `official` / `publisher` まで
@@ -25,8 +25,9 @@ Strategy Store が未設定のゲームで、戦略と判定される質問を�
 ```
 
 ```text
-どのゲームにも Rule Store が設定されていない状態で起動する
- → 起動に失敗する（Strategy Store があっても代替しない）
+どのゲームにも Rule Store が設定されていない状態で質問する
+ → どの Store も検索しない（Strategy Store があっても代替しない）
+ → ゲームを特定できない旨が返る
 ```
 
 ```text
