@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Slack の `app_mention` → intent 判定 → Vector Store 検索 → protocol prompt で回答、までが動く。
 Rule / Strategy の両方の protocol prompt が mount され、Strategy Store 未設定なら Rule で代替せずその旨を返す。
 
-未実装: R2 クライアント、`meta.yaml` とその読み込み、sync CLI、GameResolver、thread 履歴の取得、
+未実装: R2 クライアント、`meta.yaml` とその読み込み、sync CLI、GameResolver の thread context / LLM 推定、thread 履歴の取得、
 standalone question 生成、query decomposition、明示的な Retrieval API、eval。
 
 実装は一直線には進んでいない。ingest（`meta.yaml` / R2）が未着手のまま intent 判定が先に入っている。
@@ -224,11 +224,12 @@ src/tribunal/
 
 現在あるモジュール:
 
-- `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`, `GameStores`）。
-- `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。ゲームを決め → intent を判定し → そのゲームのその区分の Store ID を retriever に渡す。`game_id` が無いときは Rule Store を持つゲームが 1 つならそれ、複数なら `GameUnresolved`（全ゲームを横断しない）。回答せずに理由を返す例外は `Unanswerable` の派生（`StrategyUnavailable` / `GameUnresolved`）。
-- `src/tribunal/knowledge/games.py` — `games/games.yaml` の各ゲームの `stores`（`rule` / `strategy` → Vector Store ID）を読む。両キー必須、Store 未作成は空文字。キー欠落・`null`・それ以外の区分キーはエラー（キー欠落は将来「その区分を持たない」に使うため、空文字と区別する）。Store ID は env では持たない。
+- `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`, `GameStores`, `GameIdentity`）。
+- `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。ゲームを決め → intent を判定し → そのゲームのその区分の Store ID を retriever に渡す。`game_id` が無いときは `GameResolver` の候補が 1 つならそれ（Rule Store が無ければ別ゲームで代替せず `GameUnresolved`）、複数なら候補名を添えて `GameUnresolved`、0 なら Rule Store を持つゲームが 1 つのときだけそれ（全ゲームを横断しない）。回答せずに理由を返す例外は `Unanswerable` の派生（`StrategyUnavailable` / `GameUnresolved`）。
+- `src/tribunal/knowledge/games.py` — `games/games.yaml` の各ゲームの `stores`（`rule` / `strategy` → Vector Store ID）を読む。両キー必須、Store 未作成は空文字。キー欠落・`null`・それ以外の区分キーはエラー（キー欠落は将来「その区分を持たない」に使うため、空文字と区別する）。Store ID は env では持たない。`load_game_identities()` は `name`（必須・非空）と `aliases` / `identifying_terms`（文字列の list、必須）を読む。
 - `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy はそのゲームに `stores.strategy` があるときだけ有効。
 - `src/tribunal/application/pipeline/intent.py` — `TagIntentClassifier` → `KeywordIntentClassifier` を `IntentClassifierChain` で繋ぎ、どちらも決められなければ Rule に倒す。明示タグ（`ルール:` / `戦略:` / `[ルール]` / `[strategy]`）は質問文から除去してから retriever へ渡す。タグなしで処理したときは、どちらとして答えたかを回答末尾に添える。
+- `src/tribunal/application/pipeline/game.py` — `GameResolver`。質問文にゲームの `name` / `aliases` が含まれればそのゲーム、無ければ `identifying_terms` が含まれるゲームを候補にする（部分一致・大文字小文字無視）。thread context と LLM 推定はまだ無い。
 - `src/tribunal/infra/sprites/task_hold.py` — Sprites は inbound request が 30 秒ほど途切れると pause し、生成中の処理も一緒に凍る。Tasks API に task を登録している間だけ pause しないので、ack の時点で hold を取り、回答を返し終えたら解放する。Sprites 外では socket が無く、hold なしで動く。
 - `src/tribunal/infra/openai/file_search_retriever.py` — `FileSearchRetriever`。生成時に protocol prompt、呼び出しごとに Store ID を受け取る。Rule 用と Strategy 用の 2 インスタンスを作る。**ある区分の Store が未設定のとき、別区分・別ゲームの Store へ fallback しない**（trust boundary のため）。
 - `src/tribunal/adapters/slack/app.py` — slack_bolt の `App`（HTTP Events モード、署名検証）と `register(app)` で `POST /slack/events` を FastAPI に mount。`os.environ[...]` を読むのは **`register()` の中だけ**（module import 時ではない）。import しただけで Slack の env が必須になると test も他 platform も巻き添えになるため。`create_app(..., verify_credentials=False)` で起動時の `auth.test`（slack_bolt が既定で叩く token 検証）を止められる。test 専用のフックで、本番は既定の `True`。

@@ -7,3 +7,12 @@ class GameStores:
 
     rule: str
     strategy: str
+
+
+@dataclass(frozen=True)
+class GameIdentity:
+    """質問からゲームを特定するための名前と語彙。"""
+
+    name: str
+    aliases: tuple[str, ...]
+    identifying_terms: tuple[str, ...]

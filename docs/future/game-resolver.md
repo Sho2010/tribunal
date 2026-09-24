@@ -17,14 +17,20 @@ User Question → GameResolver → Standalone Question → Retrieval
 
 高 confidence なら確認を挟まず回答してよい。
 
-catalog は `games/games.yaml`。今読んでいるのは各ゲームの `stores` だけで、
-`aliases` と `identifying_terms`（この解決のために置いてある）を読むコードはまだ無い。
+catalog は `games/games.yaml` の `name` / `aliases` / `identifying_terms`。
 
 ## 現状との差
 
-`AnswerService.ask(question, game_id=None)` の `game_id` は配線済みだが、
-**Slack adapter が渡していないので常に `None`**。`None` のときは、Rule Store が設定された
-ゲームが 1 つだけならそれに決め、2 つ以上なら「特定できない」と返す（全ゲームを検索しない）。
+2〜4 は入っている（name と alias は同じ段で扱い、当たれば identifying terms は見ない）。
+候補が 2 つ以上なら候補名を添えて「特定できない」と返すので、6 の聞き返しは
+「ゲーム名を添えて質問し直してもらう」形で代替している。
+
+まだ無いもの:
+
+- 1（thread context）。Slack adapter は `game_id` を渡していない
+- 5（LLM 推定）と confidence。候補 0 のときは、Rule Store を持つゲームが 1 つだけならそれに決める
+- edition の解決（`editions` は読んでいない）
+- 部分一致なので、短い identifying term（`株` など）は無関係な質問にも当たる
 
 ## 受け入れ条件
 

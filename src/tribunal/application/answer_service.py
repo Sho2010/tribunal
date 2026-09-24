@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 
+from tribunal.application.pipeline.game import GameResolver
 from tribunal.application.pipeline.intent import (
     Classification,
     Intent,
@@ -19,6 +20,10 @@ STRATEGY_UNAVAILABLE = (
     "戦略の質問と判定しましたが、戦略資料がまだ整備されていないため回答できません。"
 )
 GAME_UNRESOLVED = "どのゲームについての質問か特定できないため回答できません。"
+GAME_AMBIGUOUS = (
+    "どのゲームについての質問か特定できません（候補: {names}）。ゲーム名を添えて質問してください。"
+)
+RULE_UNAVAILABLE = "{name} のルール資料がまだ整備されていないため回答できません。"
 
 
 class Unanswerable(Exception):
@@ -42,9 +47,11 @@ class AnswerService:
         strategy_retriever: Retriever,
         *,
         stores: Mapping[str, GameStores],
+        resolver: GameResolver | None = None,
         classifier: IntentClassifier | None = None,
     ) -> None:
         self._stores = stores
+        self._resolver = resolver or GameResolver({})
         self._rule_retriever = rule_retriever
         self._strategy_retriever = strategy_retriever
         self._classifier = classifier or IntentClassifierChain(
@@ -52,23 +59,36 @@ class AnswerService:
         )
 
     def ask(self, question: str, *, game_id: str | None = None) -> Answer:
-        stores = self._resolve_game(game_id)
+        stores = self._resolve_game(question, game_id)
         classification = self._classifier.classify(IntentQuery.of(question))
         if classification.intent is Intent.STRATEGY:
             return self._ask_strategy(classification, stores)
         return self._ask_rule(classification, stores)
 
-    def _resolve_game(self, game_id: str | None) -> GameStores:
+    def _resolve_game(self, question: str, game_id: str | None) -> GameStores:
         # Rule Store の無いゲームは回答対象にしない。
-        if game_id is None:
-            candidates = [s for s in self._stores.values() if s.rule]
-            if len(candidates) != 1:
+        if game_id is not None:
+            stores = self._stores.get(game_id)
+            if stores is None or not stores.rule:
                 raise GameUnresolved(GAME_UNRESOLVED)
-            return candidates[0]
-        stores = self._stores.get(game_id)
-        if stores is None or not stores.rule:
+            return stores
+
+        candidates = self._resolver.candidates(question)
+        if len(candidates) > 1:
+            names = " / ".join(self._resolver.name_of(c) for c in candidates)
+            raise GameUnresolved(GAME_AMBIGUOUS.format(names=names))
+        if len(candidates) == 1:
+            stores = self._stores.get(candidates[0])
+            if stores is None or not stores.rule:
+                raise GameUnresolved(
+                    RULE_UNAVAILABLE.format(name=self._resolver.name_of(candidates[0]))
+                )
+            return stores
+
+        with_rule = [s for s in self._stores.values() if s.rule]
+        if len(with_rule) != 1:
             raise GameUnresolved(GAME_UNRESOLVED)
-        return stores
+        return with_rule[0]
 
     def _ask_rule(self, classification: Classification, stores: GameStores) -> Answer:
         answer = self._rule_retriever.answer(
