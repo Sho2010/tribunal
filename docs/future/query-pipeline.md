@@ -44,4 +44,4 @@ Serve Fish / Banquet Table / player count / setup / examples / exceptions
 GameResolver / Thread Context / Standalone Question / Query Decomposition は無い。
 
 現在は 1 回の Responses API 呼び出しに質問文をそのまま渡しており、
-横断確認は Rule Adjudicator Protocol の prompt が担っている（決定 0006 / 0010）。
+横断確認は Rule Adjudicator Protocol の prompt が担っている（ADR 0006 / 0010）。

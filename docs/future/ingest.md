@@ -16,12 +16,12 @@ games/
     raw/                  ┘ ingest対象外。前処理のやり直し用
 ```
 
-`rule` / `strategy` の境界は trust boundary、`raw` は処理段階の区別（決定 0002 / 0004）。
+`rule` / `strategy` の境界は trust boundary、`raw` は処理段階の区別（ADR 0002 / 0004）。
 各区分の下はフラットで命名は自由。edition を path に出さない。
 
 ## meta.yaml
 
-game 1 つにつき 1 ファイル（決定 0003）。
+game 1 つにつき 1 ファイル（ADR 0003）。
 
 ```yaml
 version: 1
@@ -49,7 +49,7 @@ content_type の候補: `rulebook` / `errata` / `faq` / `strategy` / `card_guide
 
 ## sync CLI
 
-desired（catalog）と actual（Vector Store）の diff を取って適用する（決定 0005）。
+desired（catalog）と actual（Vector Store）の diff を取って適用する（ADR 0005）。
 
 - desired にあって actual に無い → upload + attach + attributes 設定
 - actual にあって desired に無い → detach / delete
@@ -73,7 +73,7 @@ desired（catalog）と actual（Vector Store）の diff を取って適用す�
 宣言していない R2 object が ingest されない
 ```
 
-sync CLI を作ったあと（決定 0016 の閾値を超えてから）:
+sync CLI を作ったあと（ADR 0016 の閾値を超えてから）:
 
 ```text
 sync を 2 回連続で実行しても差分が出ない（冪等の確認）
