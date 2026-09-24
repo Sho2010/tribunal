@@ -215,7 +215,7 @@ src/tribunal/
 命名で守ること:
 
 - **`adapters/` は inbound（呼ばれる側）専用。** OpenAI / R2 のような outbound client は `infra/` に置く。両方を adapters に入れると依存方向が逆のものが同居する。
-- **`adapters/` `application/` から `knowledge/` を import しない。** ingest は手元 / CI で走り、Sprite 上の bot は R2 も `games/` も触らない。逆向き（`cli/` → `knowledge/` → `infra/`）は正常。
+- **`adapters/` `application/` から `knowledge/` を import しない。**
 - **port を切るのは retrieval だけ**（E1 の `file_search` → E2 の Retrieval API で実装が 2 つになるため）。他は必要になるまで Protocol を作らない。
 - **protocol prompt は `.md` ファイル**として使う側にコロケートし（`application/rule/prompts/adjudicator.md`）、コード内の文字列リテラルにしない。eval で前後比較する対象なので diff が見えることが要件。
 - **`games/` と `evals/` は `src/` の外**。人が宣言・レビューするデータでコードではない。
