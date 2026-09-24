@@ -20,6 +20,15 @@ jobs:
 
       - run: uv sync --group dev --python 3.11
 
+      - name: generated code is up to date
+        run: |
+          uv run datamodel-codegen
+          if ! git diff --quiet; then
+            echo "::error::生成物が schema とずれています。uv run datamodel-codegen で再生成して commit してください。"
+            git diff
+            exit 1
+          fi
+
       - name: ruff check
         run: uv run ruff check .
 
