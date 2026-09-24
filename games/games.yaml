@@ -19,7 +19,7 @@ games:
       - 株
       - Share
     stores:
-      rule: ""
+      rule: "vs_6a84dc3ed0408191823fbbbaf1157b32"
       strategy: ""
     editions:
       - id: base
