@@ -45,7 +45,7 @@ class AnswerService:
         classifier: IntentClassifier | None = None,
     ) -> None:
         # Rule Store の無いゲームは回答対象にしない。
-        self._stores = {game_id: s for game_id, s in stores.items() if s.rule is not None}
+        self._stores = {game_id: s for game_id, s in stores.items() if s.rule}
         if not self._stores:
             raise ValueError("no game has a rule store")
         self._rule_retriever = rule_retriever
@@ -71,14 +71,13 @@ class AnswerService:
         return self._stores[game_id]
 
     def _ask_rule(self, classification: Classification, stores: GameStores) -> Answer:
-        assert stores.rule is not None
         answer = self._rule_retriever.answer(
             classification.query.question, vector_store_id=stores.rule
         )
         return _with_note(answer, RULE_NOTE if not classification.tagged else None)
 
     def _ask_strategy(self, classification: Classification, stores: GameStores) -> Answer:
-        if stores.strategy is None:
+        if not stores.strategy:
             raise StrategyUnavailable(STRATEGY_UNAVAILABLE)
         answer = self._strategy_retriever.answer(
             classification.query.question, vector_store_id=stores.strategy

@@ -20,7 +20,7 @@ games:
   - id: catan
     stores:
       rule: vs_rule
-      strategy: null
+      strategy: ""
   - id: agricola
 """,
     )
@@ -29,6 +29,15 @@ games:
         "catan": GameStores(rule="vs_rule"),
         "agricola": GameStores(),
     }
+
+
+@pytest.mark.parametrize("stores", ["stores:", "stores:\n      rule: null"])
+def test_null_is_rejected(tmp_path: Path, stores: str) -> None:
+    """未設定は空文字で書く。"""
+    path = _write(tmp_path, f"games:\n  - id: catan\n    {stores}\n")
+
+    with pytest.raises(ValueError):
+        load_game_stores(path)
 
 
 def test_unknown_store_kind_is_rejected(tmp_path: Path) -> None:

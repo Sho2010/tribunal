@@ -18,7 +18,7 @@ def main() -> int:
 
     question, game_id = sys.argv[1], sys.argv[2]
     store_id = load_game_stores()[game_id].rule
-    if store_id is None:
+    if not store_id:
         print(f"{game_id}: rule store が未設定", file=sys.stderr)
         return 1
 

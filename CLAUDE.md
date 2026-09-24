@@ -226,7 +226,7 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`, `GameStores`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。ゲームを決め → intent を判定し → そのゲームのその区分の Store ID を retriever に渡す。`game_id` が無いときは Rule Store を持つゲームが 1 つならそれ、複数なら `GameUnresolved`（全ゲームを横断しない）。回答せずに理由を返す例外は `Unanswerable` の派生（`StrategyUnavailable` / `GameUnresolved`）。
-- `src/tribunal/knowledge/games.py` — `games/games.yaml` の各ゲームの `stores`（`rule` / `strategy` → Vector Store ID、未設定は `null`）を読む。それ以外の区分キーはエラー。Store ID は env では持たない。
+- `src/tribunal/knowledge/games.py` — `games/games.yaml` の各ゲームの `stores`（`rule` / `strategy` → Vector Store ID、未設定は空文字。`null` はエラー）を読む。それ以外の区分キーはエラー。Store ID は env では持たない。
 - `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy はそのゲームに `stores.strategy` があるときだけ有効。
 - `src/tribunal/application/pipeline/intent.py` — `TagIntentClassifier` → `KeywordIntentClassifier` を `IntentClassifierChain` で繋ぎ、どちらも決められなければ Rule に倒す。明示タグ（`ルール:` / `戦略:` / `[ルール]` / `[strategy]`）は質問文から除去してから retriever へ渡す。タグなしで処理したときは、どちらとして答えたかを回答末尾に添える。
 - `src/tribunal/infra/sprites/task_hold.py` — Sprites は inbound request が 30 秒ほど途切れると pause し、生成中の処理も一緒に凍る。Tasks API に task を登録している間だけ pause しないので、ack の時点で hold を取り、回答を返し終えたら解放する。Sprites 外では socket が無く、hold なしで動く。

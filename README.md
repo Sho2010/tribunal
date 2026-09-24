@@ -30,8 +30,8 @@ Vector Store ID は env ではなく `games/games.yaml` の各ゲームの `stor
 ```yaml
 - id: nusfjord
   stores:
-    rule: vs_xxx       # null のゲームには回答しない。1 つも無ければ起動に失敗する
-    strategy: null     # null なら戦略の質問に「未整備」と返す（rule Store では代替しない）
+    rule: vs_xxx       # 空のゲームには回答しない。1 つも無ければ起動に失敗する
+    strategy: ""       # 空なら戦略の質問に「未整備」と返す（rule Store では代替しない）
 ```
 
 登録ゲーム（rule が設定されたゲーム）が 1 つならそのゲームとして答える。
