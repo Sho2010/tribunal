@@ -25,20 +25,6 @@ Slack からボードゲームのルール / 戦略を質問できる RAG chatbo
 | `OPENAI_API_KEY` | (required) OpenAI API key | `sk-your-api-key` |
 | `TRIBUNAL_MODEL` | (optional) 回答生成に使うモデル。省略時は `gpt-5` | `gpt-5` |
 
-Vector Store ID は env ではなく `games/games.yaml` の各ゲームの `stores` に書く。
-
-```yaml
-- id: nusfjord
-  stores:
-    rule: vs_xxx       # 空のゲームには回答しない
-    strategy: ""       # 空なら戦略の質問に「未整備」と返す（rule Store では代替しない）
-```
-
-`rule` / `strategy` の両キーが必須。Store 未作成は空文字で書く（キー省略・`null` は読み込み時にエラー）。
-
-登録ゲーム（rule が設定されたゲーム）が 1 つならそのゲームとして答える。
-複数あるときは、ゲームを特定する手段がまだ無いため回答できない。
-
 ### PDFの下処理（`scripts/rag-preprocess/`）:
 
 | Name | Description | Example |
