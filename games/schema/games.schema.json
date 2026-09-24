@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Catalog",
-  "description": "games.yaml 全体。",
+  "description": "games.yaml 全体（drift 検出の動作確認用）。",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "games"],
