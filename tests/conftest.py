@@ -1,5 +1,9 @@
 import pytest
 
+from tribunal.application.answer_service import AnswerService
+from tribunal.domain.answer import Answer
+from tribunal.domain.game import GameStores
+
 
 @pytest.fixture
 def slack_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -11,6 +15,16 @@ def slack_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test-token")
     monkeypatch.setenv("SLACK_SIGNING_SECRET", "test-signing-secret")
-    # OpenAI client は生成時に API key を要求する（呼び出し時ではない）。
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
-    monkeypatch.setenv("TRIBUNAL_RULE_VECTOR_STORE_ID", "vs_test")
+
+
+class _StubRetriever:
+    def answer(self, question: str, *, vector_store_id: str) -> Answer:
+        return Answer(text="stub")
+
+
+@pytest.fixture
+def answer_service() -> AnswerService:
+    """OpenAI を呼ばない AnswerService。"""
+    return AnswerService(
+        _StubRetriever(), _StubRetriever(), stores={"catan": GameStores(rule="vs_test")}
+    )

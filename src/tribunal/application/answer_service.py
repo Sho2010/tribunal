@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from tribunal.application.pipeline.intent import (
     Classification,
     Intent,
@@ -9,16 +11,26 @@ from tribunal.application.pipeline.intent import (
 )
 from tribunal.application.ports import Retriever
 from tribunal.domain.answer import Answer
+from tribunal.domain.game import GameStores
 
 RULE_NOTE = "（ルールとして回答しました。戦略の質問なら「戦略:」を付けてください）"
 STRATEGY_NOTE = "（戦略として回答しました。ルールの質問なら「ルール:」を付けてください）"
 STRATEGY_UNAVAILABLE = (
     "戦略の質問と判定しましたが、戦略資料がまだ整備されていないため回答できません。"
 )
+GAME_UNRESOLVED = "どのゲームについての質問か特定できないため回答できません。"
 
 
-class StrategyUnavailable(Exception):
-    """Strategy retriever が構成されていない。"""
+class Unanswerable(Exception):
+    """回答を生成せずに、理由をユーザーへ返す。"""
+
+
+class StrategyUnavailable(Unanswerable):
+    """そのゲームの Strategy Store が設定されていない。"""
+
+
+class GameUnresolved(Unanswerable):
+    """質問の対象ゲームを 1 つに決められない。"""
 
 
 class AnswerService:
@@ -26,31 +38,51 @@ class AnswerService:
 
     def __init__(
         self,
-        retriever: Retriever,
+        rule_retriever: Retriever,
+        strategy_retriever: Retriever,
         *,
-        strategy_retriever: Retriever | None = None,
+        stores: Mapping[str, GameStores],
         classifier: IntentClassifier | None = None,
     ) -> None:
-        self._retriever = retriever
+        # Rule Store の無いゲームは回答対象にしない。
+        self._stores = {game_id: s for game_id, s in stores.items() if s.rule is not None}
+        if not self._stores:
+            raise ValueError("no game has a rule store")
+        self._rule_retriever = rule_retriever
         self._strategy_retriever = strategy_retriever
         self._classifier = classifier or IntentClassifierChain(
             TagIntentClassifier(), KeywordIntentClassifier()
         )
 
     def ask(self, question: str, *, game_id: str | None = None) -> Answer:
+        stores = self._resolve_game(game_id)
         classification = self._classifier.classify(IntentQuery.of(question))
         if classification.intent is Intent.STRATEGY:
-            return self._ask_strategy(classification, game_id=game_id)
-        return self._ask_rule(classification, game_id=game_id)
+            return self._ask_strategy(classification, stores)
+        return self._ask_rule(classification, stores)
 
-    def _ask_rule(self, classification: Classification, *, game_id: str | None) -> Answer:
-        answer = self._retriever.answer(classification.query.question, game_id=game_id)
+    def _resolve_game(self, game_id: str | None) -> GameStores:
+        if game_id is None:
+            if len(self._stores) != 1:
+                raise GameUnresolved(GAME_UNRESOLVED)
+            return next(iter(self._stores.values()))
+        if game_id not in self._stores:
+            raise GameUnresolved(GAME_UNRESOLVED)
+        return self._stores[game_id]
+
+    def _ask_rule(self, classification: Classification, stores: GameStores) -> Answer:
+        assert stores.rule is not None
+        answer = self._rule_retriever.answer(
+            classification.query.question, vector_store_id=stores.rule
+        )
         return _with_note(answer, RULE_NOTE if not classification.tagged else None)
 
-    def _ask_strategy(self, classification: Classification, *, game_id: str | None) -> Answer:
-        if self._strategy_retriever is None:
+    def _ask_strategy(self, classification: Classification, stores: GameStores) -> Answer:
+        if stores.strategy is None:
             raise StrategyUnavailable(STRATEGY_UNAVAILABLE)
-        answer = self._strategy_retriever.answer(classification.query.question, game_id=game_id)
+        answer = self._strategy_retriever.answer(
+            classification.query.question, vector_store_id=stores.strategy
+        )
         return _with_note(answer, STRATEGY_NOTE if not classification.tagged else None)
 
 

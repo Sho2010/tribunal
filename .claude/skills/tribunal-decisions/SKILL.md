@@ -27,7 +27,7 @@ description: tribunal の設計判断の理由を調べる。次を変更・追�
 | 0001 | 2026-08-19 | Accepted | [R2 を source of truth にし、SoT を役割で分ける](references/0001-r2-as-source-of-truth.md) | document の置き場所、catalog の持ち方、Vector Store の再生成を変えるとき |
 | 0002 | 2026-08-19 | Accepted | [metadata を path から導出せず宣言する](references/0002-metadata-is-declared-not-derived.md) | R2 の path 構造、ディレクトリの区分、metadata の取得元を変えるとき |
 | 0003 | 2026-08-19 | Accepted | [metadata の置き場所はファイル形式で決める](references/0003-metadata-location-follows-file-format.md) | `meta.yaml` や front matter の schema を足す / 変えるとき |
-| 0004 | 2026-08-19 | Accepted | [Rule / Strategy corpus を分離する](references/0004-split-rule-and-strategy-stores.md) | Store の分け方、fallback、情報の信頼レベルの扱いを変えるとき |
+| 0004 | 2026-08-19 | Accepted（一部 Superseded） | [Rule / Strategy corpus を分離する](references/0004-split-rule-and-strategy-stores.md) | Store の分け方、fallback、情報の信頼レベルの扱いを変えるとき |
 | 0005 | 2026-08-19 | Accepted | [ingest を reconcile にする](references/0005-ingest-is-reconcile.md) | ingest の起動方法、冪等性、R2 event の扱いを変えるとき |
 | 0006 | 2026-08-22 | Accepted | [Rule Adjudicator Protocol を必須にする](references/0006-rule-adjudicator-protocol.md) | `adjudicator.md` を変える、Rule 回答のフォーマットや検証手順を変えるとき |
 | 0007 | 2026-08-26 | Accepted | [Strategy を Rule の拡張にしない](references/0007-strategy-is-not-rule.md) | `analyst.md` を変える、Strategy 回答の形や Rule との境界を変えるとき |
@@ -43,6 +43,7 @@ description: tribunal の設計判断の理由を調べる。次を変更・追�
 | 0017 | 2026-09-23 | Accepted（一部 Superseded） | [画像 PDF の変換はページ構造だけを保証し、中間生成物を temp に閉じる](references/0017-image-pdf-conversion-keeps-only-page-structure.md) | 画像 PDF / スキャン資料の変換、中間生成物の置き場所、変換結果の来歴を変えるとき |
 | 0018 | 2026-09-24 | Accepted（一部 Superseded） | [画像 PDF の変換は OCRmyPDF → Docling を土台にし、問題ページだけ LLM で照合する](references/0018-image-pdf-pipeline-ocrmypdf-docling-then-llm.md) | 画像 PDF 変換の経路、OCRmyPDF / Docling のオプション、照合に使う LLM を変えるとき |
 | 0019 | 2026-09-24 | Accepted | [照合するページは資料ごとに選び、Docling の Markdown をページ単位で差し替えて組み立てる](references/0019-image-pdf-reconcile-scope-and-assembly.md) | 照合するページの選び方、問題ページの検出、組み立て、見開きの分割、再処理の単位を変えるとき |
+| 0020 | 2026-09-24 | Accepted | [Store をゲームごとに持ち、games.yaml に区分名をキーにして宣言する](references/0020-per-game-stores-in-games-yaml.md) | Store の持ち方 / ID の宣言場所、対象ゲームの決め方、区分（rule / strategy 以外）を増やすとき |
 
 決定が変わったら、**理由を書き換えずに新しい番号で追加する。**
 古い方の Status を `Superseded` にし、両方から相互にリンクする。

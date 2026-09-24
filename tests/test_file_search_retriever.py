@@ -1,24 +1,25 @@
-import pytest
+from types import SimpleNamespace
+from typing import Any
 
 from tribunal.infra.openai.file_search_retriever import FileSearchRetriever
 
 
-def test_for_rule_and_for_strategy_read_separate_stores(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
-    monkeypatch.setenv("TRIBUNAL_RULE_VECTOR_STORE_ID", "vs_rule")
-    monkeypatch.setenv("TRIBUNAL_STRATEGY_VECTOR_STORE_ID", "vs_strategy")
+class RecordingResponses:
+    def __init__(self) -> None:
+        self.kwargs: dict[str, Any] = {}
 
-    assert FileSearchRetriever.for_rule("r")._vector_store_id == "vs_rule"
-    assert FileSearchRetriever.for_strategy("s")._vector_store_id == "vs_strategy"
+    def create(self, **kwargs: Any) -> Any:
+        self.kwargs = kwargs
+        return SimpleNamespace(output_text="answer", output=[])
 
 
-def test_for_strategy_requires_its_own_store_id(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Strategy Store 未設定時に Rule Store へ fallback しない。"""
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key")
-    monkeypatch.setenv("TRIBUNAL_RULE_VECTOR_STORE_ID", "vs_rule")
-    monkeypatch.delenv("TRIBUNAL_STRATEGY_VECTOR_STORE_ID", raising=False)
+def test_answer_searches_the_given_store_only() -> None:
+    responses = RecordingResponses()
+    client: Any = SimpleNamespace(responses=responses)
+    retriever = FileSearchRetriever("instructions", client=client, model="m")
 
-    with pytest.raises(KeyError):
-        FileSearchRetriever.for_strategy("s")
+    retriever.answer("q", vector_store_id="vs_rule")
+
+    (tool,) = responses.kwargs["tools"]
+    assert tool["vector_store_ids"] == ["vs_rule"]
+    assert responses.kwargs["instructions"] == "instructions"

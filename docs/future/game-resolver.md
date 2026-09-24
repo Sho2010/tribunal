@@ -17,14 +17,14 @@ User Question → GameResolver → Standalone Question → Retrieval
 
 高 confidence なら確認を挟まず回答してよい。
 
-catalog は `games/games.yaml`（実在するが、まだ読むコードが無い）。
-`aliases` と `identifying_terms` がこの解決のために置いてある。
+catalog は `games/games.yaml`。今読んでいるのは各ゲームの `stores` だけで、
+`aliases` と `identifying_terms`（この解決のために置いてある）を読むコードはまだ無い。
 
 ## 現状との差
 
 `AnswerService.ask(question, game_id=None)` の `game_id` は配線済みだが、
-**Slack adapter が渡していないので常に `None`**。結果、Vector Store は全ゲームを無フィルタで検索している。
-`games/` に複数ゲームの資料があるため、混線しうる。
+**Slack adapter が渡していないので常に `None`**。`None` のときは、Rule Store が設定された
+ゲームが 1 つだけならそれに決め、2 つ以上なら「特定できない」と返す（全ゲームを検索しない）。
 
 ## 受け入れ条件
 
