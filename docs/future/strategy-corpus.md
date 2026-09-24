@@ -6,7 +6,7 @@ Strategy Store 自体は動くが（`games.yaml` のゲームに `stores.strateg
 ## document の形式
 
 1 document = 1 Markdown + YAML front matter。
-Markdown は file 内に metadata を持てるので、front matter が唯一の置き場所になる（決定 0003）。
+Markdown は file 内に metadata を持てるので、front matter が唯一の置き場所になる（ADR 0003）。
 crawler が生成するファイルも必ず front matter を持つ。
 
 ## crawler
@@ -14,7 +14,7 @@ crawler が生成するファイルも必ず front matter を持つ。
 候補となる情報源: BGG / Reddit / wiki / ブログ / 自分のプレイ記録。
 
 無差別に crawl せず、authority（community / personal）を明示して取り込む。
-Rule 回答の根拠には使わない（決定 0004）。
+Rule 回答の根拠には使わない（ADR 0004）。
 
 正規化して Markdown + front matter にする。`raw/` に生データを残し、前処理をやり直せるようにする。
 
@@ -33,7 +33,7 @@ Rule 回答の根拠には使わない（決定 0004）。
 
 ## front matter の項目
 
-`meta.yaml` 側の項目（決定 0003）に加えて、crawl 由来のものを持つ。
+`meta.yaml` 側の項目（ADR 0003）に加えて、crawl 由来のものを持つ。
 
 ```yaml
 source_id:

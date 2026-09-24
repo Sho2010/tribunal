@@ -10,7 +10,7 @@ Slack thread を conversation 単位として使う（`thread_ts` = conversation
    └─ じゃあ2人戦だと？        ← follow-up
 ```
 
-thread 履歴は Slack から取得する（会話履歴 DB は持たない。決定 0011）。
+thread 履歴は Slack から取得する（会話履歴 DB は持たない。ADR 0011）。
 
 ## standalone question
 
@@ -23,7 +23,7 @@ follow-up をそのまま検索しない。thread context から独立した質�
 ```
 
 この変換は Retrieval の前、Intent 判定の前に行う
-（Intent 判定が thread を見ない前提はこれに依存している。決定 0008）。
+（Intent 判定が thread を見ない前提はこれに依存している。ADR 0008）。
 
 ## 現状との差
 

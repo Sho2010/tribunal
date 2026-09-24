@@ -1,7 +1,7 @@
 # eval
 
 RAG の改善を体感ではなく数値で測る。**未実装。**
-harness は promptfoo（決定 0014）。runner は自作しない。
+harness は promptfoo（ADR 0014）。runner は自作しない。
 
 ## 置き場所
 
@@ -24,7 +24,7 @@ required_evidence:
 traps:
 ```
 
-`traps` に入れる観点（Rule Adjudicator Protocol が対処している失敗モードそのもの。決定 0006）:
+`traps` に入れる観点（Rule Adjudicator Protocol が対処している失敗モードそのもの。ADR 0006）:
 
 - setup とゲーム中 rule の混同
 - 資源の支払いと配置の混同
@@ -51,7 +51,7 @@ assertion を書く前に 1 つへ寄せる。
 ## Retrieval Eval
 
 **現状では書けない。** `Answer.sources` が title / uri しか持たず file_id 単位で dedup されるため、
-chunk / score / 順位が残らない（決定 0010）。明示的な Retrieval API が入ってから。
+chunk / score / 順位が残らない（ADR 0010）。明示的な Retrieval API が入ってから。
 
 見るもの: 正しい section を検索できたか / ranking / 無関係な chunk。
 
