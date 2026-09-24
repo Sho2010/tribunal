@@ -70,7 +70,6 @@ strict-types = ["str", "int"]
 use-standard-collections = true
 use-union-operator = true
 use-title-as-name = true
-class-name-suffix = "Schema"
 use-schema-description = true
 disable-timestamp = true
 formatters = ["ruff-format", "ruff-check"]

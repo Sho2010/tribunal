@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 
-class StoresSchema(BaseModel):
+class Stores(BaseModel):
     """
     区分ごとの Vector Store ID。空文字は Store 未作成。キー欠落・null・未知の区分キーは不可。
     """
@@ -20,7 +20,7 @@ class StoresSchema(BaseModel):
     strategy: StrictStr
 
 
-class GameSchema(BaseModel):
+class Game(BaseModel):
     """
     ゲーム 1 つ。宣言していないキー（editions など）は検証しない。
     """
@@ -29,10 +29,10 @@ class GameSchema(BaseModel):
     name: Annotated[StrictStr, Field(min_length=1)]
     aliases: list[StrictStr]
     identifying_terms: list[StrictStr]
-    stores: StoresSchema
+    stores: Stores
 
 
-class CatalogSchema(BaseModel):
+class Catalog(BaseModel):
     """
     games.yaml 全体。
     """
@@ -41,4 +41,4 @@ class CatalogSchema(BaseModel):
         extra="forbid",
     )
     version: Literal[1]
-    games: list[GameSchema]
+    games: list[Game]
