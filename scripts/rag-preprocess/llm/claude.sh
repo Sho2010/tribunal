@@ -2,11 +2,11 @@
 # Claude（Messages API）に指示・画像・本文を渡し、応答の本文を stdout に出す。
 #
 # usage:
-#     ANTHROPIC_API_KEY=... scripts/rag-preprocess/llm/claude.sh <instructions.md> <image.png|jpg> < user.txt
+#     TRIBUNAL_ANTHROPIC_API_KEY=... scripts/rag-preprocess/llm/claude.sh <instructions.md> <image.png|jpg> < user.txt
 #
 # env:
-#     ANTHROPIC_API_KEY        必須
-#     TRIBUNAL_CLAUDE_MODEL    既定は claude-opus-5
+#     TRIBUNAL_ANTHROPIC_API_KEY  必須。ANTHROPIC_API_KEY で渡すと Claude Code 自身の認証にも使われる
+#     TRIBUNAL_CLAUDE_MODEL       既定は claude-opus-5
 #
 # 応答が最後まで生成されなかった（上限到達 / 拒否）ときは非 0 で終わる。
 set -euo pipefail
@@ -22,7 +22,7 @@ IMAGE="$2"
 for cmd in curl jq base64; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "$cmd not found" >&2; exit 1; }
 done
-: "${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is not set}"
+: "${TRIBUNAL_ANTHROPIC_API_KEY:?TRIBUNAL_ANTHROPIC_API_KEY is not set}"
 [[ -f "$INSTRUCTIONS" ]] || { echo "instructions not found: $INSTRUCTIONS" >&2; exit 1; }
 [[ -f "$IMAGE" ]] || { echo "image not found: $IMAGE" >&2; exit 1; }
 
@@ -56,7 +56,7 @@ if ! RESPONSE="$(
         curl -sS --fail-with-body \
             --retry 5 \
             --max-time 600 \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "x-api-key: $TRIBUNAL_ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
             -H "anthropic-beta: server-side-fallback-2026-07-01" \
             -H "Content-Type: application/json" \

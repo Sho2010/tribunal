@@ -31,7 +31,7 @@ Slack からボードゲームのルール / 戦略を質問できる RAG chatbo
 
 | Name | Description | Example |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | required when `claude`, Anthropic API key | `sk-ant-your-api-key` |
+| `TRIBUNAL_ANTHROPIC_API_KEY` | required when `claude`, Anthropic API key | `sk-ant-your-api-key` |
 | `OPENAI_API_KEY` | required when `openai` OpenAI API key | `sk-your-api-key` |
 | `TRIBUNAL_CLAUDE_MODEL` | (optional) 省略時は `claude-opus-5` | `claude-opus-5` |
 | `TRIBUNAL_LLM` | (required) 照合に使う LLM。`claude` または `openai` | `claude` |

@@ -81,9 +81,12 @@ jq -r --argjson n N '.texts[] | select(.prov[0].page_no == $n) | .text' $RUN/doc
 - 使う LLM とモデル（`claude` は既定 `claude-opus-5`、`openai` は既定 `gpt-5`）
 - 目安: Claude で 1 ページ 入力 7〜10k / 出力 1.5〜4k トークン、20 秒前後。4 並列で流す
 
-了承を得たら key を用意する。環境変数（`ANTHROPIC_API_KEY` / `OPENAI_API_KEY`）が既にあるかは
-`[[ -n "${ANTHROPIC_API_KEY:-}" ]] && echo set` のように値を出さずに確かめる。無ければ、
-**ユーザー自身のターミナルで**（`!` では入力を受けられない）次を実行してもらう:
+了承を得たら key を用意する。ユーザーが `claude` の起動前に環境変数
+（`TRIBUNAL_ANTHROPIC_API_KEY` / `OPENAI_API_KEY`）を export していれば、Bash から見える。
+あるかどうかは `[[ -n "${TRIBUNAL_ANTHROPIC_API_KEY:-}" ]] && echo set` のように値を出さずに確かめる。
+`ANTHROPIC_API_KEY` で渡すよう勧めない（Claude Code 自身の認証に使われ、会話が API 課金になる）。
+
+環境変数に無ければ、**ユーザー自身のターミナルで**（`!` では入力を受けられない）次を実行してもらう:
 
 ```sh
 read -rs k && printf '%s' "$k" > $RUN/.llm-key && chmod 600 $RUN/.llm-key
@@ -96,7 +99,7 @@ read -rs k && printf '%s' "$k" > $RUN/.llm-key && chmod 600 $RUN/.llm-key
 key がファイルにあるとき（`claude` の例。`openai` なら変数名を `OPENAI_API_KEY` にする）:
 
 ```sh
-ANTHROPIC_API_KEY="$(<$RUN/.llm-key)" TRIBUNAL_LLM=claude xargs -P 4 -I{} \
+TRIBUNAL_ANTHROPIC_API_KEY="$(<$RUN/.llm-key)" TRIBUNAL_LLM=claude xargs -P 4 -I{} \
     $S/reconcile-page.sh $RUN/pages/p{}.png $RUN/pages/p{}.ocr.txt $RUN/pages/p{}.docling.txt {} $RUN/pages/p{}.md \
     <$RUN/pages.txt
 ```
