@@ -39,6 +39,7 @@ uv run pytest                # test
 - 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/tribunal/entrypoints/slack.py`）が行う。
 - dev 依存は `[dependency-groups]` の `dev`（uv のネイティブな置き場所。`[project.optional-dependencies]` ではない）。
 - mypy は `strict`。型スタブを同梱しない `slack_bolt` / `slack_sdk` だけ module 単位で `ignore_missing_imports` を許容している（全体を緩めない）。
+- `games/schema/games.schema.json`（JSON Schema）が games.yaml の schema の正。変えたら `uv run datamodel-codegen` で `src/tribunal/knowledge/games_schema.py` を再生成して一緒に commit する（オプションは pyproject の `[tool.datamodel-codegen]`）。生成物が schema とずれていると pytest が落ちる。生成物は手で編集しない。
 - ruff は `E` / `F` / `I` / `UP` / `B` に加えて **相対 import 禁止（`TID252`）**。レイヤの依存方向を import 文から追える状態を保つため。line-length は 100。
 - CI は `.github/workflows/ci.yml`。**Python 3.11**（`requires-python` の下限）で上記 4 つを実行する。
 
@@ -199,7 +200,7 @@ ADR は「一度潰れた案」の記録でもある。**再提案する前に�
 ```text
 games/                # <game_id>/{rule/, strategy/, raw/} は実在
   games.yaml          #   実在。読んでいるのは stores だけ
-  schema/             #   (未)
+  schema/             #   games.schema.json は実在
   <game_id>/meta.yaml #   (未)
 evals/                # (未) promptfooconfig.yaml, cases/, provider.py
 src/tribunal/
@@ -208,7 +209,7 @@ src/tribunal/
   application/        # answer_service.py, ports.py, pipeline/, rule/, strategy/
   domain/
   infra/              # outbound: openai/, sprites/。r2/ は (未)
-  knowledge/          # games.yaml の stores 読み込み。meta.yaml / front matter / reconcile は (未)
+  knowledge/          # games.yaml の読み込み。meta.yaml / front matter / reconcile は (未)
   cli/                # (未)
 ```
 
@@ -226,7 +227,7 @@ src/tribunal/
 
 - `src/tribunal/domain/` — chat platform 非依存の値オブジェクト（`Answer`, `Source`, `Game`, `GameStores`）。
 - `src/tribunal/application/answer_service.py` — `AnswerService.ask(question, game_id=None) -> Answer`。**Chat adapter が触ってよい唯一の入口**。retrieval はここ以下に実装し、adapter から OpenAI / R2 を直接呼ばない。`GameResolver` でゲームを決め → Rule Store が無ければ `RuleUnavailable`（Strategy の質問でも）→ intent を判定し → そのゲームのその区分の Store ID を retriever に渡す。全ゲームの catalog は持たない。回答せずに理由を返す例外は `application/unanswerable.py` の `Unanswerable` の派生（`GameUnresolved` / `RuleUnavailable` / `StrategyUnavailable`）。
-- `src/tribunal/knowledge/games.py` — `load_games()` が `games/games.yaml` の各ゲームを `Game` にする。`name`（必須・非空）、`aliases` / `identifying_terms`（文字列の list、必須）、`stores`（`rule` / `strategy` → Vector Store ID）。`stores` は両キー必須、Store 未作成は空文字。キー欠落・`null`・それ以外の区分キーはエラー（キー欠落は将来「その区分を持たない」に使うため、空文字と区別する）。Store ID は env では持たない。`editions` はまだ読まない。
+- `src/tribunal/knowledge/games.py` — `load_games()` が `games/games.yaml` を生成物 `games_schema.py` の pydantic モデルで検証し、各ゲームを `Game` にする。game id の重複検査（JSON Schema で表現できない）はここで手書きしている。schema の中身: トップレベルは `version: 1` と `games` だけ、game id の重複はエラー。各ゲームは `id` / `name`（必須・非空）、`aliases` / `identifying_terms`（文字列の list、必須）、`stores`（`rule` / `strategy` → Vector Store ID）。`stores` は両キー必須、Store 未作成は空文字。キー欠落・`null`・それ以外の区分キーはエラー（キー欠落は将来「その区分を持たない」に使うため、空文字と区別する）。Store ID は env では持たない。ゲーム直下の未宣言キー（`editions` など）は無視する。
 - `src/tribunal/application/rule/` `src/tribunal/application/strategy/` — protocol prompt の置き場所。`protocol.py` の `adjudicator_prompt()` / `analyst_prompt()` が同階層の `prompts/*.md` を読む。**Rule Adjudicator を拡張して Strategy を兼ねさせない**。両方 mount されるが、Strategy はそのゲームに `stores.strategy` があるときだけ有効。
 - `src/tribunal/application/pipeline/intent.py` — `TagIntentClassifier` → `KeywordIntentClassifier` を `IntentClassifierChain` で繋ぎ、どちらも決められなければ Rule に倒す。明示タグ（`ルール:` / `戦略:` / `[ルール]` / `[strategy]`）は質問文から除去してから retriever へ渡す。タグなしで処理したときは、どちらとして答えたかを回答末尾に添える。
 - `src/tribunal/application/pipeline/game.py` — Protocol `GameResolver.resolve(question, game_id=None) -> Game`（決められなければ `GameUnresolved`）と、実装 `CatalogGameResolver`。後者は `game_id` があればそれ、無ければ質問文にゲームの `name` / `aliases` が含まれるゲーム、それも無ければ `identifying_terms` が含まれるゲームを候補にする（部分一致・大文字小文字無視）。候補 2 つ以上は候補名を添えて `GameUnresolved`。候補 0 なら Rule Store を持つゲームが 1 つのときだけそれ（全ゲームを横断しない）。名指しされたゲームに Rule Store が無くても、別のゲームに差し替えない。thread context と LLM 推定はまだ無い。

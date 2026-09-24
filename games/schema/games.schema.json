@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Catalog",
+  "description": "games.yaml 全体。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "games"],
+  "properties": {
+    "version": { "const": 1 },
+    "games": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Game" }
+    }
+  },
+  "$defs": {
+    "Game": {
+      "title": "Game",
+      "description": "ゲーム 1 つ。宣言していないキー（editions など）は検証しない。",
+      "type": "object",
+      "required": ["id", "name", "aliases", "identifying_terms", "stores"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "aliases": { "type": "array", "items": { "type": "string" } },
+        "identifying_terms": { "type": "array", "items": { "type": "string" } },
+        "stores": { "$ref": "#/$defs/Stores" }
+      }
+    },
+    "Stores": {
+      "title": "Stores",
+      "description": "区分ごとの Vector Store ID。空文字は Store 未作成。キー欠落・null・未知の区分キーは不可。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "strategy"],
+      "properties": {
+        "rule": { "type": "string" },
+        "strategy": { "type": "string" }
+      }
+    }
+  }
+}

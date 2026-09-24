@@ -10,6 +10,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "openai>=3.3.1",
     "pyyaml>=6.0.3",
+    "pydantic>=2",
 ]
 
 [dependency-groups]
@@ -19,6 +20,7 @@ dev = [
     "pytest>=8.3",
     "httpx>=0.27",
     "types-pyyaml>=6.0.12.20260906",
+    "datamodel-code-generator>=0.82.0",
 ]
 
 [build-system]
@@ -55,6 +57,25 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["slack_bolt.*", "slack_sdk.*"]
 ignore_missing_imports = true
+
+[tool.datamodel-codegen]
+input = "games/schema/games.schema.json"
+input-file-type = "jsonschema"
+output = "src/tribunal/knowledge/games_schema.py"
+output-model-type = "pydantic_v2.BaseModel"
+target-python-version = "3.11"
+use-annotated = true
+field-constraints = true
+strict-types = ["str", "int"]
+use-standard-collections = true
+use-union-operator = true
+use-title-as-name = true
+class-name-suffix = "Schema"
+use-schema-description = true
+disable-timestamp = true
+formatters = ["ruff-format", "ruff-check"]
+custom-file-header = """# 生成物。直接編集しない。
+# games/schema/games.schema.json を変えて `uv run datamodel-codegen` で再生成する。"""
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
