@@ -1,50 +1,29 @@
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from tribunal.domain.game import Game, GameStores
+from tribunal.knowledge import games_schema as schema
 
 DEFAULT_GAMES_FILE = Path("games/games.yaml")
 
-STORE_KINDS = frozenset({"rule", "strategy"})
-
 
 def load_games(path: Path = DEFAULT_GAMES_FILE) -> dict[str, Game]:
-    """games.yaml から game_id ごとの Game を読む。"""
-    catalog = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return {game["id"]: _game_of(game) for game in catalog["games"]}
+    """games.yaml を schema で検証し、game_id ごとの Game にする。"""
+    catalog = schema.Catalog.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+    # game id の一意性は JSON Schema で表現できない。
+    ids = [game.id for game in catalog.games]
+    duplicated = sorted({i for i in ids if ids.count(i) > 1})
+    if duplicated:
+        raise ValueError(f"duplicated game id: {duplicated}")
+    return {game.id: _to_domain(game) for game in catalog.games}
 
 
-def _game_of(game: dict[str, Any]) -> Game:
-    name = game.get("name")
-    if not isinstance(name, str) or not name:
-        raise ValueError(f"{game['id']}: name must be a non-empty string")
+def _to_domain(game: schema.Game) -> Game:
     return Game(
-        id=game["id"],
-        name=name,
-        aliases=_strings_of(game, "aliases"),
-        identifying_terms=_strings_of(game, "identifying_terms"),
-        stores=_stores_of(game),
+        id=game.id,
+        name=game.name,
+        aliases=tuple(game.aliases),
+        identifying_terms=tuple(game.identifying_terms),
+        stores=GameStores(rule=game.stores.rule, strategy=game.stores.strategy),
     )
-
-
-def _strings_of(game: dict[str, Any], key: str) -> tuple[str, ...]:
-    values = game.get(key)
-    if not isinstance(values, list) or not all(isinstance(v, str) for v in values):
-        raise ValueError(f"{game['id']}: {key} must be a list of strings")
-    return tuple(values)
-
-
-def _stores_of(game: dict[str, Any]) -> GameStores:
-    stores = game.get("stores")
-    if not isinstance(stores, dict):
-        raise ValueError(f"{game['id']}: stores must be a mapping")
-    if set(stores) != STORE_KINDS:
-        raise ValueError(
-            f"{game['id']}: stores must have exactly {sorted(STORE_KINDS)}, got {sorted(stores)}"
-        )
-    for kind, store_id in stores.items():
-        if not isinstance(store_id, str):
-            raise ValueError(f"{game['id']}: stores.{kind} must be a string")
-    return GameStores(rule=stores["rule"], strategy=stores["strategy"])

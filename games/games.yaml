@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=schema/games.schema.json
 version: 1
 
 # stores: 区分（rule / strategy）ごとの Vector Store ID。両方のキーが必須で、null は不可。
