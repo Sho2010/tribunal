@@ -39,9 +39,9 @@ uv run pytest                # test
 - 環境変数は `.env.example` を `.env` にコピーして設定（`SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`）。`.env` の読み込みは entrypoint（`src/tribunal/entrypoints/slack.py`）が行う。
 - dev 依存は `[dependency-groups]` の `dev`（uv のネイティブな置き場所。`[project.optional-dependencies]` ではない）。
 - mypy は `strict`。型スタブを同梱しない `slack_bolt` / `slack_sdk` だけ module 単位で `ignore_missing_imports` を許容している（全体を緩めない）。
-- `games/schema/games.schema.json`（JSON Schema）が games.yaml の schema の正。変えたら `uv run datamodel-codegen` で `src/tribunal/knowledge/games_schema.py` を再生成して一緒に commit する（オプションは pyproject の `[tool.datamodel-codegen]`）。生成物が schema とずれていると pytest が落ちる。生成物は手で編集しない。
+- `games/schema/games.schema.json`（JSON Schema）が games.yaml の schema の正。変えたら `uv run datamodel-codegen` で `src/tribunal/knowledge/games_schema.py` を再生成して一緒に commit する（オプションは pyproject の `[tool.datamodel-codegen]`）。生成物が schema とずれていると pytest が落ちる（CI では先に再生成して diff を出して落ちる）。生成物は手で編集しない。
 - ruff は `E` / `F` / `I` / `UP` / `B` に加えて **相対 import 禁止（`TID252`）**。レイヤの依存方向を import 文から追える状態を保つため。line-length は 100。
-- CI は `.github/workflows/ci.yml`。**Python 3.11**（`requires-python` の下限）で上記 4 つを実行する。
+- CI は `.github/workflows/ci.yml`。**Python 3.11**（`requires-python` の下限）で、生成物のずれの検出（再生成して `git diff`）の後に上記 4 つを実行する。
 
 ## 開発の進め方
 
